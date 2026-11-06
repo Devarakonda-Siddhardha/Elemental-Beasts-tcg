@@ -59,6 +59,7 @@ func run_all_tests() -> void:
 	test_16_element_stones_cannot_be_spent_when_insufficient()
 	test_17_compass_searches_deck_for_stone()
 	test_18_complete_match_simulation_without_crashes()
+	test_19_procedural_sound_generator()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -319,3 +320,46 @@ func test_18_complete_match_simulation_without_crashes() -> void:
 		
 	var completed = (current_sim_turn > 0)
 	assert_true(completed, "Requirement 18: Complete simulated match executes end-to-end without crashes")
+
+func test_19_procedural_sound_generator() -> void:
+	var snd_gen = preload("res://scripts/audio/procedural_sound_generator.gd")
+	var hover = snd_gen.generate_card_hover()
+	var click = snd_gen.generate_card_click()
+	var play = snd_gen.generate_card_play()
+	var mana_spend = snd_gen.generate_mana_spend()
+	var mana_ref = snd_gen.generate_mana_refresh()
+	var stone_pl = snd_gen.generate_stone_place()
+	var stone_sp = snd_gen.generate_stone_spend()
+	var evo = snd_gen.generate_evolution()
+	var fus = snd_gen.generate_fusion()
+	var atk = snd_gen.generate_attack_slash()
+	var dmg = snd_gen.generate_damage_hit()
+	var defeat = snd_gen.generate_beast_defeat()
+	var spell = snd_gen.generate_spell_cast()
+	var status = snd_gen.generate_status_applied()
+	var turn = snd_gen.generate_turn_change()
+	var vic = snd_gen.generate_victory()
+	var def = snd_gen.generate_defeat()
+	var ui = snd_gen.generate_ui_click()
+	
+	var all_valid = (
+		hover != null and hover.data.size() > 0 and
+		click != null and click.data.size() > 0 and
+		play != null and play.data.size() > 0 and
+		mana_spend != null and mana_spend.data.size() > 0 and
+		mana_ref != null and mana_ref.data.size() > 0 and
+		stone_pl != null and stone_pl.data.size() > 0 and
+		stone_sp != null and stone_sp.data.size() > 0 and
+		evo != null and evo.data.size() > 0 and
+		fus != null and fus.data.size() > 0 and
+		atk != null and atk.data.size() > 0 and
+		dmg != null and dmg.data.size() > 0 and
+		defeat != null and defeat.data.size() > 0 and
+		spell != null and spell.data.size() > 0 and
+		status != null and status.data.size() > 0 and
+		turn != null and turn.data.size() > 0 and
+		vic != null and vic.data.size() > 0 and
+		def != null and def.data.size() > 0 and
+		ui != null and ui.data.size() > 0
+	)
+	assert_true(all_valid, "Requirement 19: All 18 procedural audio sound synthesizers generate valid waveforms")

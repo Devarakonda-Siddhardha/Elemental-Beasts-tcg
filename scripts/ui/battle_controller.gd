@@ -196,6 +196,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 	# If Stone card -> place directly
 	if card.card_type == "stone":
 		if game_state.play_stone_from_hand(0, hand_index):
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_stone_place()
 			log_message("[color=#2a9d8f]You placed " + card.name + " into your Stone Pile.[/color]")
 			refresh_full_ui()
 		else:
@@ -206,6 +208,9 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 	if card.id == "little_dragon":
 		var beast = game_state.summon_little_dragon(0, hand_index)
 		if beast:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_card_play()
+				get_node("/root/SoundManager").play_mana_spend()
 			log_message("[color=#e9c46a]Summoned Little Dragon for 2 Mana.[/color]")
 			refresh_full_ui()
 		else:
@@ -216,6 +221,9 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 	if card.id == "compass":
 		var res = game_state.cast_compass(0, hand_index)
 		if res.success:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+				get_node("/root/SoundManager").play_mana_spend()
 			log_message("[color=#f4a261]Compass: " + res.details + "[/color]")
 			refresh_full_ui()
 		else:
@@ -234,6 +242,9 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 	if card.sub_type == "fusion_dragon":
 		var fused = game_state.fuse_beasts(0, hand_index)
 		if fused:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_fusion()
+				get_node("/root/SoundManager").play_stone_spend()
 			log_message("[color=#ffb703]ELEMENTAL FUSION! " + card.name + " emerges onto the battlefield![/color]")
 			refresh_full_ui()
 		else:
@@ -258,6 +269,9 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		if h_idx != -1:
 			var success = game_state.evolve_beast(0, field_index, h_idx)
 			if success:
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_evolution()
+					get_node("/root/SoundManager").play_stone_spend()
 				log_message("[color=#48cae4]DRAGON EVOLUTION! Little Dragon evolved into " + beast.card_data.name + "![/color]")
 			else:
 				log_message("[color=#e76f51]Evolution failed. Insufficient stones or invalid target.[/color]")
@@ -280,6 +294,8 @@ func _on_player_field_right_clicked(card_ui: CardUI, field_index: int) -> void:
 	var beast = game_state.player_fields[0][field_index]
 	var res = game_state.activate_beast_ability(0, field_index)
 	if res.success:
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_spell()
 		log_message("[color=#ffb703]" + beast.card_data.name + " activated ability: " + res.details + "[/color]")
 		refresh_full_ui()
 	else:
@@ -291,6 +307,9 @@ func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		var defender = game_state.player_fields[1][field_index]
 		var res = game_state.attack_beast(attacker, defender)
 		if res.success:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_attack()
+				get_node("/root/SoundManager").play_damage()
 			log_message("[color=#e63946]Combat: " + res.details + "[/color]")
 		else:
 			log_message("[color=#e76f51]Attack failed: " + res.error + "[/color]")
@@ -305,6 +324,9 @@ func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		if h_idx != -1:
 			var res = game_state.cast_spell(0, h_idx, target)
 			if res.success:
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_spell()
+					get_node("/root/SoundManager").play_mana_spend()
 				log_message("[color=#00b4d8]Spell cast on " + target.card_data.name + "![/color]")
 			else:
 				log_message("[color=#e76f51]Spell failed: " + res.error + "[/color]")
@@ -320,6 +342,8 @@ func reset_action_mode() -> void:
 
 func _on_end_turn_pressed() -> void:
 	if game_state.active_player_id == 0 and not game_state.is_game_over:
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
 		reset_action_mode()
 		game_state.end_turn()
 		refresh_full_ui()
@@ -335,6 +359,9 @@ func _on_end_turn_pressed() -> void:
 			)
 
 func _on_turn_started(turn: int, player_id: int) -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_turn_change()
+		get_node("/root/SoundManager").play_mana_refresh()
 	log_message("[b]Turn " + str(turn) + " started for Player " + str(player_id + 1) + " (Mana refreshed to 5)[/b]")
 	update_hud()
 
@@ -358,16 +385,25 @@ func _on_combat_resolved(res: Dictionary) -> void:
 	pass
 
 func _on_game_ended(winner: int, reason: String) -> void:
+	if has_node("/root/SoundManager"):
+		if winner == 0:
+			get_node("/root/SoundManager").play_victory()
+		else:
+			get_node("/root/SoundManager").play_defeat()
 	var msg = "[b][color=#e63946]GAME OVER! Player " + str(winner + 1) + " WINS! (" + reason + ")[/color][/b]"
 	log_message(msg)
 	prompt_banner.text = "GAME OVER! Player " + str(winner + 1) + " WINS!"
 	prompt_banner.visible = true
 
 func _on_legacy_toggle(toggled_on: bool) -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
 	use_legacy_art = toggled_on
 	refresh_full_ui()
 
 func _on_menu_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 
 func log_message(text: String) -> void:

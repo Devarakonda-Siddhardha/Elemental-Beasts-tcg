@@ -112,12 +112,15 @@ func show_card_preview(card: CardData) -> void:
 			preview_fidelity.modulate = Color(0.4, 0.8, 1.0)
 
 func _on_filter_selected(idx: int) -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	current_filter = filter_option.get_item_text(idx)
 	populate_cards()
 
 func _on_legacy_toggled(toggled: bool) -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	use_legacy = toggled
 	populate_cards()
 
 func _on_back_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

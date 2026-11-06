@@ -79,16 +79,20 @@ func populate_catalog() -> void:
 
 func add_card_to_deck(cid: String) -> void:
 	if current_deck_cards.size() < 40:
+		if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_card_click()
 		current_deck_cards.append(cid)
 		refresh_deck_view()
 
 func remove_card_from_deck(idx: int) -> void:
 	if idx >= 0 and idx < current_deck_cards.size():
+		if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_card_click()
 		current_deck_cards.remove_at(idx)
 		refresh_deck_view()
 
 func _on_save_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	deck_count_label.text = "SAVED! (" + str(current_deck_cards.size()) + " cards)"
 
 func _on_back_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

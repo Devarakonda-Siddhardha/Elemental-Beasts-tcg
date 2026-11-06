@@ -300,6 +300,8 @@ func set_status_display(status_name: String, turns: int) -> void:
 
 func _on_mouse_entered() -> void:
 	card_hovered.emit(self, true)
+	if Engine.has_singleton("SoundManager") or has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_card_hover()
 	if not is_on_field:
 		var tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tween.tween_property(self, "scale", Vector2(1.08, 1.08), 0.12)
@@ -314,6 +316,8 @@ func _on_mouse_exited() -> void:
 
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_card_click()
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			card_clicked.emit(self)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:

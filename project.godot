@@ -10,7 +10,12 @@ config/name="Elemental Beasts TCG - Legacy Reborn"
 config/description="Reconstruction of the 2024-2025 Elemental Beast TCG featuring dual Mana & Element Stone systems, Dragon Evolution, and Elemental Fusion."
 config/version="1.0.0"
 run/main_scene="res://scenes/main_menu.tscn"
-config/features=PackedStringArray("4.3", "Forward Plus")
+config/features=PackedStringArray("4.3", "Mobile")
+config/icon="res://icon.png"
+
+[autoload]
+
+SoundManager="*res://scripts/audio/sound_manager.gd"
 
 [display]
 
@@ -18,7 +23,10 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=6
 
 [rendering]
 
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true

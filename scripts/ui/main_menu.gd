@@ -17,23 +17,29 @@ func _ready() -> void:
 	quit_button.pressed.connect(_on_quit_pressed)
 
 func _on_vs_ai_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
 
 func _on_pvp_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	var battle_scene = load("res://scenes/battle.tscn").instantiate()
 	battle_scene.is_vs_ai = false
 	get_tree().root.add_child(battle_scene)
 	queue_free()
 
 func _on_deck_builder_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	get_tree().change_scene_to_file("res://scenes/deck_builder.tscn")
 
 func _on_collection_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	get_tree().change_scene_to_file("res://scenes/card_collection.tscn")
 
 func _on_test_suite_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	# Run verification tests
 	var test_runner = TestRunner.new()
 
 func _on_quit_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	get_tree().quit()
