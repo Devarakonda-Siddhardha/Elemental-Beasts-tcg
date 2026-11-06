@@ -80,7 +80,7 @@ func update_ui() -> void:
 		return
 		
 	# 1. Select Template Frame by Element & Type
-	var template_path = get_template_path(card_data.element, card_data.card_type, card_data.sub_type)
+	var template_path = get_template_path(card_data.element, card_data.card_type, card_data.sub_type, card_data.fusion_materials)
 	if ResourceLoader.exists(template_path):
 		frame_rect.texture = load(template_path)
 		
@@ -226,12 +226,12 @@ func load_card_artwork() -> void:
 	else:
 		art_rect.texture = null
 
-func get_template_path(element_name: String, ctype: String, subtype: String) -> String:
-	# 1. Fusion Dragons (15 unique dual-element templates)
-	if subtype == "fusion_dragon":
-		if card_data and card_data.fusion_materials.size() >= 2:
-			var m1 = card_data.fusion_materials[0].replace("_dragon", "")
-			var m2 = card_data.fusion_materials[1].replace("_dragon", "")
+static func get_template_path(element_name: String, ctype: String, subtype: String, fusion_materials: Array[String] = []) -> String:
+	# 1. Fusion & Ascended Dragons (15 unique dual-element templates)
+	if subtype == "fusion_dragon" or subtype == "ascended_dragon":
+		if fusion_materials.size() >= 2:
+			var m1 = fusion_materials[0].replace("_dragon", "")
+			var m2 = fusion_materials[1].replace("_dragon", "")
 			var p1 = "res://assets/templates/fusion_" + m1 + "_" + m2 + ".png"
 			var p2 = "res://assets/templates/fusion_" + m2 + "_" + m1 + ".png"
 			if ResourceLoader.exists(p1): return p1
@@ -261,11 +261,11 @@ func get_template_path(element_name: String, ctype: String, subtype: String) -> 
 			return "res://assets/templates/template_support.png"
 
 	# 5. Little Dragon / Base Dragons (Dragon crest & swords/shield)
-	if subtype == "base_dragon" or (card_data and card_data.id == "little_dragon"):
+	if subtype == "base_dragon" or element_name == "neutral":
 		if ResourceLoader.exists("res://assets/templates/template_little_dragon.png"):
 			return "res://assets/templates/template_little_dragon.png"
 
-	# 6. Elemental Dragons (Elemental dragon combat frames)
+	# 6. Elemental Dragons & Transcendent Dragons (Elemental dragon combat frames)
 	var el_template = "res://assets/templates/template_" + element_name.to_lower() + ".png"
 	if ResourceLoader.exists(el_template):
 		return el_template

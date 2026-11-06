@@ -12,8 +12,9 @@ var hp: int = 0
 var max_hp: int = 0
 var attack: int = 0
 var ability: Dictionary = {}
-var evolution_stage: int = 0 # 0 = base, 1 = elemental, 2 = fusion
+var evolution_stage: int = 0 # 0 = base, 1 = elemental, 2 = fusion, 3 = transcendent, 4 = ascended, 5 = god
 var evolves_from: String = ""
+var ascends_from: String = ""
 var fusion_materials: Array[String] = []
 var description: String = ""
 var status: String = "CONFIRMED" # "CONFIRMED", "REMEMBERED", "PROVISIONAL"
@@ -33,6 +34,7 @@ static func from_dict(dict: Dictionary) -> CardData:
 	card.ability = dict.get("ability", {}).duplicate(true)
 	card.evolution_stage = dict.get("evolution_stage", 0)
 	card.evolves_from = dict.get("evolves_from", "") if dict.get("evolves_from") != null else ""
+	card.ascends_from = dict.get("ascends_from", "") if dict.get("ascends_from") != null else ""
 	
 	card.fusion_materials.clear()
 	if dict.has("fusion_materials"):

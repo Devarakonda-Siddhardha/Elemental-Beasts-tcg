@@ -119,6 +119,23 @@ static func execute_beast_ability(
 					
 			result_info["details"] = "Recovered " + str(recovered.size()) + " spell(s) from discard!"
 			
+		"phantom_gale":
+			# Zephyr Shadow Dragon: attack twice this turn
+			beast.max_attacks_per_turn = 2
+			result_info["details"] = "Phantom Gale unleashed! Can attack twice this turn!"
+			
+		"ascended_void_tempest":
+			# Ascended Zephyr Shadow Dragon: 10 damage split among all opposing beasts
+			var alive: Array = []
+			for eb in all_enemy_beasts:
+				if eb is BeastInstance and not eb.is_dead():
+					alive.append(eb)
+			if alive.size() > 0:
+				var dmg_each = maxi(1, int(10 / alive.size()))
+				for eb in alive:
+					eb.take_damage(dmg_each)
+			result_info["details"] = "Void Tempest dealt 10 split damage across opposing forces!"
+			
 		"direct_damage":
 			# Fire Dragon: Flame Burst (4 direct damage)
 			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:

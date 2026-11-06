@@ -58,6 +58,9 @@ func get_total_stones() -> int:
 		total += int(count)
 	return total
 
+func can_spend_stones(cost: Dictionary) -> bool:
+	return has_stones(cost)
+
 func has_stones(required: Dictionary) -> bool:
 	# Check specific elements
 	var total_any_needed = required.get("any_stone", 0)

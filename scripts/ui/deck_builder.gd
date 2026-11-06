@@ -78,10 +78,16 @@ func populate_catalog() -> void:
 		card_ui.card_clicked.connect(func(c): add_card_to_deck(c.card_data.id))
 
 func add_card_to_deck(cid: String) -> void:
-	if current_deck_cards.size() < 40:
-		if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_card_click()
-		current_deck_cards.append(cid)
-		refresh_deck_view()
+	if current_deck_cards.size() >= RulesConfig.STANDARD_DECK_SIZE:
+		return
+	var count = current_deck_cards.count(cid)
+	if cid == "god_dragon" and count >= RulesConfig.GOD_DRAGON_MAX_PER_DECK:
+		return
+	if not cid.ends_with("_stone") and count >= RulesConfig.MAX_COPIES_PER_CARD:
+		return
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_card_click()
+	current_deck_cards.append(cid)
+	refresh_deck_view()
 
 func remove_card_from_deck(idx: int) -> void:
 	if idx >= 0 and idx < current_deck_cards.size():
@@ -91,7 +97,11 @@ func remove_card_from_deck(idx: int) -> void:
 
 func _on_save_pressed() -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-	deck_count_label.text = "SAVED! (" + str(current_deck_cards.size()) + " cards)"
+	var val = RulesConfig.validate_deck(current_deck_cards)
+	if val.valid:
+		deck_count_label.text = "SAVED! (40/40 CARDS - VALID)"
+	else:
+		deck_count_label.text = val.error
 
 func _on_back_pressed() -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()

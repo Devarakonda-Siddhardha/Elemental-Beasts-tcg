@@ -14,14 +14,25 @@ var current_action_mode: String = "none" # "none", "evolving", "fusing", "attack
 
 # UI Nodes
 @onready var player_hp_label: Label = $HUD/PlayerPanel/HPLabel
+@onready var player_hp_bar: ProgressBar = $HUD/PlayerPanel/HPBar
 @onready var player_mana_label: Label = $HUD/PlayerPanel/ManaLabel
 @onready var player_mana_bar: ProgressBar = $HUD/PlayerPanel/ManaBar
 @onready var player_stones_container: HBoxContainer = $HUD/PlayerPanel/StonesContainer
 
+@onready var opponent_panel: Panel = $HUD/OpponentPanel
 @onready var opponent_hp_label: Label = $HUD/OpponentPanel/HPLabel
+@onready var opponent_hp_bar: ProgressBar = $HUD/OpponentPanel/HPBar
 @onready var opponent_mana_label: Label = $HUD/OpponentPanel/ManaLabel
 @onready var opponent_mana_bar: ProgressBar = $HUD/OpponentPanel/ManaBar
 @onready var opponent_stones_container: HBoxContainer = $HUD/OpponentPanel/StonesContainer
+
+@onready var player_deck_count_label: Label = $Board/PilesLeft/PlayerDeckBox/Label
+@onready var player_discard_count_label: Label = $Board/PilesLeft/PlayerDiscardBox/Label
+@onready var player_discard_preview: TextureRect = $Board/PilesLeft/PlayerDiscardBox/Slot/Preview
+
+@onready var enemy_deck_count_label: Label = $Board/PilesLeft/EnemyDeckBox/Label
+@onready var enemy_discard_count_label: Label = $Board/PilesLeft/EnemyDiscardBox/Label
+@onready var enemy_discard_preview: TextureRect = $Board/PilesLeft/EnemyDiscardBox/Slot/Preview
 
 @onready var player_hand_container: HBoxContainer = $Board/PlayerHandScroll/HandContainer
 @onready var player_field_container: HBoxContainer = $Board/PlayerField/BeastSlots
@@ -56,6 +67,12 @@ func _ready() -> void:
 	if menu_button:
 		menu_button.pressed.connect(_on_menu_pressed)
 		
+	if opponent_panel:
+		opponent_panel.gui_input.connect(_on_opponent_panel_input)
+	var opp_field = $Board/OpponentField
+	if opp_field:
+		opp_field.gui_input.connect(_on_opponent_panel_input)
+		
 	# Start match
 	game_state.start_game()
 	log_message("[color=#ffd166]Welcome to Elemental Beasts TCG - Legacy Reborn![/color]")
@@ -69,18 +86,48 @@ func refresh_full_ui() -> void:
 
 func update_hud() -> void:
 	# Player 0 HUD
-	player_hp_label.text = "HP: " + str(game_state.player_hp[0]) + "/30"
+	var p_hp = game_state.player_hp[0]
+	player_hp_label.text = "HP: " + str(p_hp) + "/30"
+	if player_hp_bar:
+		player_hp_bar.value = p_hp
 	var p_mana = game_state.get_mana(0).current_mana
 	player_mana_label.text = "MANA: " + str(p_mana) + "/5"
 	player_mana_bar.value = p_mana
 	refresh_stones_display(0, player_stones_container)
 	
 	# Opponent HUD
-	opponent_hp_label.text = "HP: " + str(game_state.player_hp[1]) + "/30"
+	var op_hp = game_state.player_hp[1]
+	opponent_hp_label.text = "HP: " + str(op_hp) + "/30"
+	if opponent_hp_bar:
+		opponent_hp_bar.value = op_hp
 	var op_mana = game_state.get_mana(1).current_mana
 	opponent_mana_label.text = "MANA: " + str(op_mana) + "/5"
 	opponent_mana_bar.value = op_mana
 	refresh_stones_display(1, opponent_stones_container)
+	
+	# Piles Tracking
+	if player_deck_count_label:
+		player_deck_count_label.text = "DECK: " + str(game_state.player_decks[0].size())
+	if enemy_deck_count_label:
+		enemy_deck_count_label.text = "ENEMY DECK: " + str(game_state.player_decks[1].size())
+		
+	if player_discard_count_label:
+		var p_disc = game_state.player_discards[0]
+		player_discard_count_label.text = "DISCARD: " + str(p_disc.size())
+		if player_discard_preview and not p_disc.is_empty():
+			var top_card: CardData = p_disc[-1]
+			var tpath = CardUI.get_template_path(top_card.element, top_card.card_type, top_card.sub_type)
+			if ResourceLoader.exists(tpath):
+				player_discard_preview.texture = load(tpath)
+				
+	if enemy_discard_count_label:
+		var op_disc = game_state.player_discards[1]
+		enemy_discard_count_label.text = "DISCARD: " + str(op_disc.size())
+		if enemy_discard_preview and not op_disc.is_empty():
+			var top_card: CardData = op_disc[-1]
+			var tpath = CardUI.get_template_path(top_card.element, top_card.card_type, top_card.sub_type)
+			if ResourceLoader.exists(tpath):
+				enemy_discard_preview.texture = load(tpath)
 	
 	# Turn Info
 	turn_label.text = "TURN " + str(game_state.turn_number)
@@ -144,6 +191,19 @@ func refresh_player_hand() -> void:
 						break
 			elif card.sub_type == "fusion_dragon":
 				if FusionEngine.can_fuse(field, card).valid:
+					playable = true
+			elif card.sub_type == "transcendent_dragon":
+				for b in field:
+					if TranscendenceEngine.can_transcend(b, card, stone_mgr).valid:
+						playable = true
+						break
+			elif card.sub_type == "ascended_dragon":
+				for b in field:
+					if AscensionEngine.can_ascend(b, card, stone_mgr).valid:
+						playable = true
+						break
+			elif card.id == "god_dragon":
+				if GodDragonRitual.can_summon_god_dragon(card, field, stone_mgr, game_state.player_has_summoned_god_dragon[0]).valid:
 					playable = true
 			elif card.id == "compass" and mana_mgr.can_spend(RulesConfig.COMPASS_MANA_COST):
 				playable = true
@@ -250,6 +310,35 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		else:
 			log_message("[color=#e76f51]Cannot fuse " + card.name + ". Required materials not on field.[/color]")
 		return
+
+	# If Transcendent card -> enter transcending mode
+	if card.sub_type == "transcendent_dragon":
+		selected_hand_card_ui = card_ui
+		current_action_mode = "transcending"
+		prompt_banner.text = "Select an elemental dragon on field to Transcend into " + card.name + " (5 matching stones)!"
+		prompt_banner.visible = true
+		return
+
+	# If Ascended card -> enter ascending mode
+	if card.sub_type == "ascended_dragon":
+		selected_hand_card_ui = card_ui
+		current_action_mode = "ascending"
+		prompt_banner.text = "Select a fusion dragon on field to Ascend into " + card.name + " (3 stones of each element)!"
+		prompt_banner.visible = true
+		return
+
+	# If God Dragon -> perform ritual from hand
+	if card.id == "god_dragon":
+		var res = game_state.summon_god_dragon(0, hand_index)
+		if res.success:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_fusion()
+				get_node("/root/SoundManager").play_victory()
+			log_message("[color=#ffd700][b]THE GOD DRAGON DESCENDS![/b] Genesis Roar banishes all enemy beasts and deals 10 direct damage![/color]")
+			refresh_full_ui()
+		else:
+			log_message("[color=#e76f51]God Dragon Ritual failed: " + res.error + "[/color]")
+		return
 		
 	# If Spell card -> enter targeting mode
 	if card.card_type == "spell":
@@ -275,6 +364,38 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 				log_message("[color=#48cae4]DRAGON EVOLUTION! Little Dragon evolved into " + beast.card_data.name + "![/color]")
 			else:
 				log_message("[color=#e76f51]Evolution failed. Insufficient stones or invalid target.[/color]")
+		reset_action_mode()
+		refresh_full_ui()
+		return
+
+	if current_action_mode == "transcending":
+		var hand = game_state.get_hand(0)
+		var h_idx = hand.find(selected_hand_card_ui.card_data)
+		if h_idx != -1:
+			var res_beast = game_state.transcend_beast(0, field_index, h_idx)
+			if res_beast:
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_evolution()
+					get_node("/root/SoundManager").play_stone_spend()
+				log_message("[color=#e0aaff]TRANSCENDENCE ACHIEVED! " + res_beast.card_data.name + " descends with pure elemental majesty![/color]")
+			else:
+				log_message("[color=#e76f51]Transcendence failed. Insufficient stones or invalid target.[/color]")
+		reset_action_mode()
+		refresh_full_ui()
+		return
+
+	if current_action_mode == "ascending":
+		var hand = game_state.get_hand(0)
+		var h_idx = hand.find(selected_hand_card_ui.card_data)
+		if h_idx != -1:
+			var res_beast = game_state.ascend_beast(0, field_index, h_idx)
+			if res_beast:
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_fusion()
+					get_node("/root/SoundManager").play_stone_spend()
+				log_message("[color=#ffd166]DRAGON ASCENSION! " + res_beast.card_data.name + " transcends mortal limits![/color]")
+			else:
+				log_message("[color=#e76f51]Ascension failed. Insufficient stones or invalid target.[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -333,6 +454,21 @@ func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		reset_action_mode()
 		refresh_full_ui()
 		return
+
+func _on_opponent_panel_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if current_action_mode == "attacking" and selected_field_beast_ui:
+			var attacker = selected_field_beast_ui.beast_instance_ref
+			var res = game_state.attack_player_direct(attacker)
+			if res.success:
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_attack()
+					get_node("/root/SoundManager").play_damage()
+				log_message("[color=#e63946]DIRECT HIT: " + res.details + "[/color]")
+			else:
+				log_message("[color=#e76f51]Direct attack failed: " + res.error + "[/color]")
+			reset_action_mode()
+			refresh_full_ui()
 
 func reset_action_mode() -> void:
 	current_action_mode = "none"

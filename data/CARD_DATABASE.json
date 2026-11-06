@@ -299,6 +299,34 @@
       "status": "CONFIRMED"
     },
     {
+      "id": "zephyr_shadow_dragon",
+      "name": "Zephyr Shadow Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "shadow_wind",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 28,
+      "max_hp": 28,
+      "attack": 12,
+      "ability": {
+        "name": "Phantom Gale",
+        "description": "Discard one Shadow Stone and one Wind Stone. Attack twice this turn, and attacks bypass defending Beasts to strike the opposing Player directly.",
+        "cost": {
+          "shadow": 1,
+          "wind": 1
+        },
+        "trigger": "activated",
+        "effect": "phantom_gale"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "shadow_dragon",
+        "wind_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
       "id": "compass",
       "name": "Compass",
       "card_type": "support",
@@ -438,6 +466,287 @@
         "amount": 5
       },
       "status": "PROVISIONAL"
+    },
+    {
+      "id": "transcendent_shadow_dragon",
+      "name": "Transcendent Shadow Dragon",
+      "card_type": "beast",
+      "sub_type": "transcendent_dragon",
+      "element": "shadow",
+      "mana_cost": 0,
+      "stone_cost": {
+        "shadow": 5
+      },
+      "hp": 24,
+      "max_hp": 24,
+      "attack": 10,
+      "ability": {
+        "name": "Abyssal Shroud",
+        "description": "Immune to all Spell cards. Can attack the opposing Player directly even when opposing Beasts are present.",
+        "trigger": "passive",
+        "effect": "direct_pierce_spell_immunity"
+      },
+      "evolution_stage": 3,
+      "evolves_from": "shadow_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "transcendent_fire_dragon",
+      "name": "Transcendent Fire Dragon",
+      "card_type": "beast",
+      "sub_type": "transcendent_dragon",
+      "element": "fire",
+      "mana_cost": 0,
+      "stone_cost": {
+        "fire": 5
+      },
+      "hp": 25,
+      "max_hp": 25,
+      "attack": 12,
+      "ability": {
+        "name": "Infernal Nova",
+        "description": "Discard 2 Fire Stones from the Stone Pile: Deal 6 damage to all opposing Beasts.",
+        "trigger": "activated",
+        "effect": "board_wipe_damage",
+        "damage": 6
+      },
+      "evolution_stage": 3,
+      "evolves_from": "fire_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "transcendent_wind_dragon",
+      "name": "Transcendent Wind Dragon",
+      "card_type": "beast",
+      "sub_type": "transcendent_dragon",
+      "element": "wind",
+      "mana_cost": 0,
+      "stone_cost": {
+        "wind": 5
+      },
+      "hp": 22,
+      "max_hp": 22,
+      "attack": 9,
+      "ability": {
+        "name": "Tempest Gale",
+        "description": "Discard 1 Wind Stone from the Stone Pile to allow this dragon to attack up to 3 times this turn.",
+        "trigger": "activated",
+        "effect": "triple_attack"
+      },
+      "evolution_stage": 3,
+      "evolves_from": "wind_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "transcendent_lightning_dragon",
+      "name": "Transcendent Lightning Dragon",
+      "card_type": "beast",
+      "sub_type": "transcendent_dragon",
+      "element": "lightning",
+      "mana_cost": 0,
+      "stone_cost": {
+        "lightning": 5
+      },
+      "hp": 22,
+      "max_hp": 22,
+      "attack": 11,
+      "ability": {
+        "name": "Supercharged Volt",
+        "description": "Attacks apply Stun to the target for 1 turn.",
+        "trigger": "passive",
+        "effect": "on_hit_stun"
+      },
+      "evolution_stage": 3,
+      "evolves_from": "lightning_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "transcendent_ice_dragon",
+      "name": "Transcendent Ice Dragon",
+      "card_type": "beast",
+      "sub_type": "transcendent_dragon",
+      "element": "ice",
+      "mana_cost": 0,
+      "stone_cost": {
+        "ice": 5
+      },
+      "hp": 26,
+      "max_hp": 26,
+      "attack": 8,
+      "ability": {
+        "name": "Absolute Zero",
+        "description": "Freezes any attacking Beast for 1 turn upon taking combat damage.",
+        "trigger": "passive",
+        "effect": "retaliate_freeze"
+      },
+      "evolution_stage": 3,
+      "evolves_from": "ice_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "transcendent_mechanical_dragon",
+      "name": "Transcendent Mechanical Dragon",
+      "card_type": "beast",
+      "sub_type": "transcendent_dragon",
+      "element": "mechanical",
+      "mana_cost": 0,
+      "stone_cost": {
+        "mechanical": 5
+      },
+      "hp": 28,
+      "max_hp": 28,
+      "attack": 10,
+      "ability": {
+        "name": "Titan Alloy Aegis",
+        "description": "Reduces all damage taken by 3.",
+        "trigger": "passive",
+        "effect": "damage_reduction",
+        "amount": 3
+      },
+      "evolution_stage": 3,
+      "evolves_from": "mechanical_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "ascended_volcovolt_dragon",
+      "name": "Ascended VolcoVolt Dragon",
+      "card_type": "beast",
+      "sub_type": "ascended_dragon",
+      "element": "fire_lightning",
+      "mana_cost": 0,
+      "stone_cost": {
+        "fire": 3,
+        "lightning": 3
+      },
+      "hp": 40,
+      "max_hp": 40,
+      "attack": 20,
+      "ability": {
+        "name": "Cataclysmic Storm",
+        "description": "Discard 2 Fire and 2 Lightning Stones: Deal 12 damage to two different opposing creatures and apply Stun.",
+        "trigger": "activated",
+        "effect": "ascended_volcanic_storm",
+        "damage": 12
+      },
+      "evolution_stage": 4,
+      "ascends_from": "volcovolt_dragon",
+      "fusion_materials": [
+        "fire_dragon",
+        "lightning_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "ascended_spark_wraith_dragon",
+      "name": "Ascended Spark Wraith Dragon",
+      "card_type": "beast",
+      "sub_type": "ascended_dragon",
+      "element": "shadow_lightning",
+      "mana_cost": 0,
+      "stone_cost": {
+        "shadow": 3,
+        "lightning": 3
+      },
+      "hp": 36,
+      "max_hp": 36,
+      "attack": 18,
+      "ability": {
+        "name": "Wraith Cataclysm",
+        "description": "Discard 2 Shadow and 2 Lightning Stones: Recover all Spells from your discard pile. All Lightning and Shadow spells can be cast for free this turn.",
+        "trigger": "activated",
+        "effect": "ascended_spell_recovery"
+      },
+      "evolution_stage": 4,
+      "ascends_from": "spark_wraith_dragon",
+      "fusion_materials": [
+        "shadow_dragon",
+        "lightning_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "ascended_techno_frost_dragon",
+      "name": "Ascended Techno Frost Dragon",
+      "card_type": "beast",
+      "sub_type": "ascended_dragon",
+      "element": "ice_mechanical",
+      "mana_cost": 0,
+      "stone_cost": {
+        "ice": 3,
+        "mechanical": 3
+      },
+      "hp": 38,
+      "max_hp": 38,
+      "attack": 16,
+      "ability": {
+        "name": "Glacial Overdrive",
+        "description": "Discard 2 Ice and 2 Mechanical Stones: Freeze all opposing Beasts and draw 2 cards for each Beast frozen.",
+        "trigger": "activated",
+        "effect": "ascended_frost_draw"
+      },
+      "evolution_stage": 4,
+      "ascends_from": "techno_frost_dragon",
+      "fusion_materials": [
+        "ice_dragon",
+        "mechanical_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "ascended_zephyr_shadow_dragon",
+      "name": "Ascended Zephyr Shadow Dragon",
+      "card_type": "beast",
+      "sub_type": "ascended_dragon",
+      "element": "shadow_wind",
+      "mana_cost": 0,
+      "stone_cost": {
+        "shadow": 3,
+        "wind": 3
+      },
+      "hp": 39,
+      "max_hp": 39,
+      "attack": 17,
+      "ability": {
+        "name": "Void Tempest",
+        "description": "Discard 2 Shadow and 2 Wind Stones: Deal 10 damage split among all opposing Beasts and strike the enemy Player directly.",
+        "trigger": "activated",
+        "effect": "ascended_void_tempest"
+      },
+      "evolution_stage": 4,
+      "ascends_from": "zephyr_shadow_dragon",
+      "fusion_materials": [
+        "shadow_dragon",
+        "wind_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "god_dragon",
+      "name": "Omni-Elemental God Dragon",
+      "card_type": "beast",
+      "sub_type": "god_dragon",
+      "element": "neutral",
+      "mana_cost": 0,
+      "stone_cost": {
+        "fire": 1,
+        "lightning": 1,
+        "shadow": 1,
+        "wind": 1,
+        "ice": 1,
+        "mechanical": 1
+      },
+      "hp": 60,
+      "max_hp": 60,
+      "attack": 30,
+      "ability": {
+        "name": "Genesis Roar",
+        "description": "Summoned from Hand using 3 Fusion/Ascended Dragons covering all 6 elements and 1 of each Element Stone. When summoned: Banish all opposing Beasts and deal 10 direct damage to the opposing Player.",
+        "trigger": "on_summon",
+        "effect": "genesis_roar"
+      },
+      "evolution_stage": 5,
+      "max_per_deck": 1,
+      "status": "CONFIRMED_SYSTEM"
     }
   ]
 }

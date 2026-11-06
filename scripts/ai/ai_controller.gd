@@ -20,7 +20,42 @@ func execute_turn() -> Array[String]:
 		if game_state.play_stone_from_hand(ai_player_id, stone_idx):
 			action_log.append("AI placed " + card.name + " into Stone Pile.")
 			
-	# 2. Check for Fusion Opportunities
+	# 2. Check for God Dragon Ritual
+	var god_idx = find_card_in_hand("god_dragon")
+	if god_idx != -1:
+		var god_card = game_state.get_hand(ai_player_id)[god_idx]
+		var check = GodDragonRitual.can_summon_god_dragon(
+			god_card, 
+			game_state.get_field(ai_player_id), 
+			game_state.get_stones(ai_player_id), 
+			game_state.player_has_summoned_god_dragon[ai_player_id]
+		)
+		if check.valid:
+			var res = game_state.summon_god_dragon(ai_player_id, god_idx)
+			if res.success:
+				action_log.append("AI summoned God Dragon! Genesis Roar unleashed!")
+				
+	# 3. Check for Ascension Opportunities
+	var asc_pair = find_playable_ascension()
+	if asc_pair.size() == 2:
+		var beast_idx = asc_pair[0]
+		var asc_card_idx = asc_pair[1]
+		var card = game_state.get_hand(ai_player_id)[asc_card_idx]
+		var asc_beast = game_state.ascend_beast(ai_player_id, beast_idx, asc_card_idx)
+		if asc_beast:
+			action_log.append("AI ascended into " + card.name + "!")
+			
+	# 4. Check for Transcendence Opportunities
+	var trans_pair = find_playable_transcendence()
+	if trans_pair.size() == 2:
+		var beast_idx = trans_pair[0]
+		var trans_card_idx = trans_pair[1]
+		var card = game_state.get_hand(ai_player_id)[trans_card_idx]
+		var trans_beast = game_state.transcend_beast(ai_player_id, beast_idx, trans_card_idx)
+		if trans_beast:
+			action_log.append("AI transcended into " + card.name + "!")
+
+	# 5. Check for Fusion Opportunities
 	var fusion_idx = find_playable_fusion_in_hand()
 	if fusion_idx != -1:
 		var card = game_state.get_hand(ai_player_id)[fusion_idx]
@@ -158,3 +193,33 @@ func find_playable_spell_in_hand() -> int:
 		if hand[i].card_type == "spell" and mana_mgr.can_spend(hand[i].mana_cost):
 			return i
 	return -1
+
+func find_playable_transcendence() -> Array[int]:
+	var field = game_state.get_field(ai_player_id)
+	var hand = game_state.get_hand(ai_player_id)
+	var stone_mgr = game_state.get_stones(ai_player_id)
+	
+	for b_idx in range(field.size()):
+		var beast: BeastInstance = field[b_idx]
+		for h_idx in range(hand.size()):
+			var card: CardData = hand[h_idx]
+			if card.sub_type == "transcendent_dragon":
+				var check = TranscendenceEngine.can_transcend(beast, card, stone_mgr)
+				if check.valid:
+					return [b_idx, h_idx]
+	return []
+
+func find_playable_ascension() -> Array[int]:
+	var field = game_state.get_field(ai_player_id)
+	var hand = game_state.get_hand(ai_player_id)
+	var stone_mgr = game_state.get_stones(ai_player_id)
+	
+	for b_idx in range(field.size()):
+		var beast: BeastInstance = field[b_idx]
+		for h_idx in range(hand.size()):
+			var card: CardData = hand[h_idx]
+			if card.sub_type == "ascended_dragon":
+				var check = AscensionEngine.can_ascend(beast, card, stone_mgr)
+				if check.valid:
+					return [b_idx, h_idx]
+	return []

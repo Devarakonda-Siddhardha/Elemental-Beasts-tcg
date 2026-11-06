@@ -8,6 +8,9 @@ signal card_played(player_id: int, card: CardData)
 signal beast_summoned(player_id: int, beast: BeastInstance)
 signal beast_evolved(player_id: int, beast: BeastInstance)
 signal beasts_fused(player_id: int, fused_beast: BeastInstance)
+signal beast_transcended(player_id: int, beast: BeastInstance)
+signal beast_ascended(player_id: int, beast: BeastInstance)
+signal god_dragon_summoned(player_id: int, beast: BeastInstance)
 signal spell_cast(player_id: int, card: CardData)
 signal combat_resolved(result: Dictionary)
 signal game_ended(winner_id: int, reason: String)
@@ -16,6 +19,7 @@ var turn_number: int = 1
 var active_player_id: int = 0 # 0 = Player, 1 = Opponent
 var is_game_over: bool = false
 var winner_id: int = -1
+var player_has_summoned_god_dragon: Array[bool] = [false, false]
 
 # Player states (0 and 1)
 var player_hp: Array[int] = [RulesConfig.STARTING_PLAYER_HP, RulesConfig.STARTING_PLAYER_HP]
@@ -62,6 +66,7 @@ func start_game(deck0_ids: Array = [], deck1_ids: Array = []) -> void:
 		player_hands[p].clear()
 		player_discards[p].clear()
 		player_fields[p].clear()
+		player_has_summoned_god_dragon[p] = false
 		
 		# Build deck
 		var deck_ids = deck0_ids if p == 0 else deck1_ids
@@ -88,6 +93,7 @@ func start_game(deck0_ids: Array = [], deck1_ids: Array = []) -> void:
 					"evolution_stage": orig.evolution_stage,
 					"evolves_from": orig.evolves_from,
 					"fusion_materials": orig.fusion_materials,
+					"ascends_from": orig.ascends_from,
 					"description": orig.description,
 					"status": orig.status
 				})
@@ -105,16 +111,23 @@ func start_game(deck0_ids: Array = [], deck1_ids: Array = []) -> void:
 func get_default_deck_ids() -> Array[String]:
 	return [
 		"little_dragon", "little_dragon", "little_dragon", "little_dragon",
-		"wind_dragon", "wind_dragon",
-		"shadow_dragon", "shadow_dragon",
-		"fire_dragon", "fire_dragon",
-		"lightning_dragon", "lightning_dragon",
-		"volcovolt_dragon", "spark_wraith_dragon", "techno_frost_dragon",
-		"compass", "compass",
-		"lightning_strike", "lightning_strike",
-		"dragon_elixir", "elemental_shield",
-		"fire_stone", "fire_stone", "lightning_stone", "lightning_stone",
-		"shadow_stone", "shadow_stone", "wind_stone", "wind_stone", "ice_stone"
+		"shadow_dragon", "shadow_dragon", "shadow_dragon",
+		"lightning_dragon", "lightning_dragon", "lightning_dragon",
+		"spark_wraith_dragon", "spark_wraith_dragon",
+		"transcendent_shadow_dragon",
+		"transcendent_lightning_dragon",
+		"ascended_spark_wraith_dragon",
+		"god_dragon",
+		"compass", "compass", "compass",
+		"lightning_strike", "lightning_strike", "lightning_strike",
+		"dragon_elixir", "dragon_elixir",
+		"elemental_shield", "elemental_shield",
+		"shadow_stone", "shadow_stone", "shadow_stone", "shadow_stone", "shadow_stone",
+		"lightning_stone", "lightning_stone", "lightning_stone", "lightning_stone", "lightning_stone",
+		"fire_stone",
+		"wind_stone",
+		"ice_stone",
+		"mechanical_stone"
 	]
 
 func draw_card(player_id: int) -> CardData:
@@ -274,6 +287,103 @@ func fuse_beasts(player_id: int, fusion_card_hand_index: int) -> BeastInstance:
 		card_played.emit(player_id, fusion_card)
 		return fused_beast
 	return null
+
+func transcend_beast(player_id: int, field_index: int, hand_index: int) -> BeastInstance:
+	if player_id != active_player_id or is_game_over:
+		return null
+	var field = player_fields[player_id]
+	var hand = player_hands[player_id]
+	if field_index < 0 or field_index >= field.size():
+		return null
+	if hand_index < 0 or hand_index >= hand.size():
+		return null
+		
+	var field_beast: BeastInstance = field[field_index]
+	var hand_card: CardData = hand[hand_index]
+	var stone_mgr = player_stones[player_id]
+	
+	var check = TranscendenceEngine.can_transcend(field_beast, hand_card, stone_mgr)
+	if not check.valid:
+		return null
+		
+	var transcendent_beast = TranscendenceEngine.execute_transcendence(field_beast, hand_card, stone_mgr, turn_number)
+	if transcendent_beast:
+		field[field_index] = transcendent_beast
+		hand.remove_at(hand_index)
+		beast_transcended.emit(player_id, transcendent_beast)
+		card_played.emit(player_id, hand_card)
+		return transcendent_beast
+	return null
+
+func ascend_beast(player_id: int, field_index: int, hand_index: int) -> BeastInstance:
+	if player_id != active_player_id or is_game_over:
+		return null
+	var field = player_fields[player_id]
+	var hand = player_hands[player_id]
+	if field_index < 0 or field_index >= field.size():
+		return null
+	if hand_index < 0 or hand_index >= hand.size():
+		return null
+		
+	var field_beast: BeastInstance = field[field_index]
+	var hand_card: CardData = hand[hand_index]
+	var stone_mgr = player_stones[player_id]
+	
+	var check = AscensionEngine.can_ascend(field_beast, hand_card, stone_mgr)
+	if not check.valid:
+		return null
+		
+	var ascended_beast = AscensionEngine.execute_ascension(field_beast, hand_card, stone_mgr, turn_number)
+	if ascended_beast:
+		field[field_index] = ascended_beast
+		hand.remove_at(hand_index)
+		beast_ascended.emit(player_id, ascended_beast)
+		card_played.emit(player_id, hand_card)
+		return ascended_beast
+	return null
+
+func summon_god_dragon(player_id: int, hand_index: int) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var hand_card: CardData = hand[hand_index]
+	if hand_card.id != "god_dragon":
+		return {"success": false, "error": "Card is not God Dragon"}
+		
+	var field = player_fields[player_id]
+	var stone_mgr = player_stones[player_id]
+	var already_summoned = player_has_summoned_god_dragon[player_id]
+	
+	var res = GodDragonRitual.execute_god_dragon_ritual(
+		hand_card,
+		field,
+		stone_mgr,
+		already_summoned,
+		player_id,
+		turn_number
+	)
+	if res.success:
+		player_has_summoned_god_dragon[player_id] = true
+		hand.remove_at(hand_index)
+		var god_beast: BeastInstance = res.beast
+		god_dragon_summoned.emit(player_id, god_beast)
+		card_played.emit(player_id, hand_card)
+		
+		# Genesis Roar: banish all enemy field beasts and deal 10 direct damage
+		var enemy_id = 1 if player_id == 0 else 0
+		var enemy_field = player_fields[enemy_id]
+		for enemy_beast in enemy_field:
+			if enemy_beast is BeastInstance:
+				player_discards[enemy_id].append(enemy_beast.card_data)
+				for mat in enemy_beast.fusion_materials:
+					player_discards[enemy_id].append(mat)
+		enemy_field.clear()
+		deal_player_damage(enemy_id, 10)
+		
+		return {"success": true, "beast": god_beast}
+	return res
 
 func cast_compass(player_id: int, hand_index: int) -> Dictionary:
 	if player_id != active_player_id or is_game_over:

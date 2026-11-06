@@ -60,6 +60,10 @@ func run_all_tests() -> void:
 	test_17_compass_searches_deck_for_stone()
 	test_18_complete_match_simulation_without_crashes()
 	test_19_procedural_sound_generator()
+	test_20_single_unified_40_card_deck_validation()
+	test_21_transcendence_from_hand_with_5_stones()
+	test_22_ascension_from_hand_with_3_stones_each()
+	test_23_god_dragon_ritual_from_hand_and_one_per_duel()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -363,3 +367,132 @@ func test_19_procedural_sound_generator() -> void:
 		ui != null and ui.data.size() > 0
 	)
 	assert_true(all_valid, "Requirement 19: All 18 procedural audio sound synthesizers generate valid waveforms")
+
+func test_20_single_unified_40_card_deck_validation() -> void:
+	var state = GameState.new()
+	state.start_game()
+	var d0_size = state.player_decks[0].size() + state.player_hands[0].size()
+	assert_true(d0_size == RulesConfig.STANDARD_DECK_SIZE, "Requirement 20: Player starts with exactly 40 unified cards in one deck", "Actual: " + str(d0_size))
+	
+	# Validate default decks file
+	var path = "res://data/default_decks.json"
+	var file = FileAccess.open(path, FileAccess.READ)
+	var text = file.get_as_text()
+	file.close()
+	var json = JSON.new()
+	json.parse(text)
+	var data = json.get_data()
+	var all_decks_valid = true
+	for d in data.get("decks", []):
+		var check = RulesConfig.validate_deck(d.get("cards", []))
+		if not check.valid:
+			all_decks_valid = false
+			printerr("Invalid deck: " + d.get("name", "") + " - " + check.error)
+	assert_true(all_decks_valid, "Requirement 20b: All preconstructed decks conform to exactly 40 cards with copy limits")
+
+func test_21_transcendence_from_hand_with_5_stones() -> void:
+	var state = GameState.new()
+	state.start_game()
+	
+	# Prepare shadow dragon on field
+	var shadow_beast = BeastInstance.create(state.card_db["shadow_dragon"], 0, 1)
+	shadow_beast.fusion_materials.append(state.card_db["little_dragon"])
+	state.player_fields[0] = [shadow_beast]
+	
+	# Prepare hand with Transcendent Shadow Dragon
+	var trans_card = state.card_db["transcendent_shadow_dragon"]
+	state.player_hands[0] = [trans_card]
+	
+	# Test insufficient stones (< 5)
+	state.player_stones[0].stone_pile["shadow"] = 4
+	var fail_trans = state.transcend_beast(0, 0, 0)
+	assert_true(fail_trans == null, "Requirement 21a: Cannot transcend with fewer than 5 matching stones")
+	
+	# Add 5th stone and execute
+	state.player_stones[0].stone_pile["shadow"] = 5
+	var success_trans = state.transcend_beast(0, 0, 0)
+	assert_true(
+		success_trans != null and
+		success_trans.card_data.id == "transcendent_shadow_dragon" and
+		state.player_stones[0].get_stone_count("shadow") == 0 and
+		success_trans.fusion_materials.size() == 2 and
+		state.player_hands[0].is_empty(),
+		"Requirement 21b: Transcends from hand with 5 stones and preserves underlying materials"
+	)
+
+func test_22_ascension_from_hand_with_3_stones_each() -> void:
+	var state = GameState.new()
+	state.start_game()
+	
+	# Prepare Spark Wraith Dragon on field (fusion of shadow + lightning)
+	var spark_beast = BeastInstance.create(state.card_db["spark_wraith_dragon"], 0, 1)
+	spark_beast.fusion_materials.append(state.card_db["shadow_dragon"])
+	spark_beast.fusion_materials.append(state.card_db["lightning_dragon"])
+	state.player_fields[0] = [spark_beast]
+	
+	# Prepare hand with Ascended Spark Wraith Dragon
+	var asc_card = state.card_db["ascended_spark_wraith_dragon"]
+	state.player_hands[0] = [asc_card]
+	
+	# Test insufficient stones (3 shadow, only 2 lightning)
+	state.player_stones[0].stone_pile["shadow"] = 3
+	state.player_stones[0].stone_pile["lightning"] = 2
+	var fail_asc = state.ascend_beast(0, 0, 0)
+	assert_true(fail_asc == null, "Requirement 22a: Cannot ascend without 3 stones of EACH component element")
+	
+	# Add 3rd lightning stone and execute
+	state.player_stones[0].stone_pile["lightning"] = 3
+	var success_asc = state.ascend_beast(0, 0, 0)
+	assert_true(
+		success_asc != null and
+		success_asc.card_data.id == "ascended_spark_wraith_dragon" and
+		state.player_stones[0].get_stone_count("shadow") == 0 and
+		state.player_stones[0].get_stone_count("lightning") == 0 and
+		success_asc.fusion_materials.size() == 3 and
+		state.player_hands[0].is_empty(),
+		"Requirement 22b: Ascends from hand with 3 stones each and preserves underlying materials"
+	)
+
+func test_23_god_dragon_ritual_from_hand_and_one_per_duel() -> void:
+	var state = GameState.new()
+	state.start_game()
+	
+	# 3 Fusion dragons representing 6 distinct elements:
+	# 1. VolcoVolt: Fire + Lightning
+	# 2. Zephyr Shadow: Shadow + Wind
+	# 3. Techno Frost: Ice + Mechanical
+	var b1 = BeastInstance.create(state.card_db["volcovolt_dragon"], 0, 1)
+	var b2 = BeastInstance.create(state.card_db["zephyr_shadow_dragon"], 0, 1)
+	var b3 = BeastInstance.create(state.card_db["techno_frost_dragon"], 0, 1)
+	state.player_fields[0] = [b1, b2, b3]
+	
+	# Prepare enemy beast on field
+	var enemy_beast = BeastInstance.create(state.card_db["little_dragon"], 1, 1)
+	state.player_fields[1] = [enemy_beast]
+	var initial_enemy_hp = state.player_hp[1]
+	
+	# Hand card
+	state.player_hands[0] = [state.card_db["god_dragon"]]
+	
+	# Incomplete stones (missing mechanical)
+	for el in RulesConfig.CONFIRMED_ELEMENTS:
+		state.player_stones[0].stone_pile[el] = 1 if el != "mechanical" else 0
+	var fail_res = state.summon_god_dragon(0, 0)
+	assert_true(not fail_res.success, "Requirement 23a: Cannot summon God Dragon without 1 stone of each of the 6 elements")
+	
+	# Complete stones
+	state.player_stones[0].stone_pile["mechanical"] = 1
+	var success_res = state.summon_god_dragon(0, 0)
+	assert_true(
+		success_res.success and
+		state.player_fields[0].size() == 1 and
+		state.player_fields[0][0].card_data.id == "god_dragon" and
+		state.player_fields[1].is_empty() and
+		state.player_hp[1] == initial_enemy_hp - 10,
+		"Requirement 23b: God Dragon Ritual succeeds, consumes materials, triggers Genesis Roar banish & 10 direct damage"
+	)
+	
+	# Attempting second God Dragon summon in the duel must fail
+	state.player_hands[0] = [state.card_db["god_dragon"]]
+	var second_res = state.summon_god_dragon(0, 0)
+	assert_true(not second_res.success, "Requirement 23c: God Dragon cannot be summoned more than once per player per duel")
