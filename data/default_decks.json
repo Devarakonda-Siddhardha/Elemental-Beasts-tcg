@@ -1,0 +1,54 @@
+{
+  "decks": [
+    {
+      "id": "deck_storm_shadow",
+      "name": "Spark & Shadow Strike",
+      "description": "Harness the spell immunity of Shadow Dragon and the electrifying power of Spark Wraith Dragon.",
+      "cards": [
+        "little_dragon", "little_dragon", "little_dragon", "little_dragon",
+        "shadow_dragon", "shadow_dragon",
+        "lightning_dragon", "lightning_dragon",
+        "spark_wraith_dragon", "spark_wraith_dragon",
+        "compass", "compass",
+        "lightning_strike", "lightning_strike", "lightning_strike",
+        "dragon_elixir", "dragon_elixir",
+        "elemental_shield",
+        "shadow_stone", "shadow_stone", "shadow_stone", "shadow_stone",
+        "lightning_stone", "lightning_stone", "lightning_stone", "lightning_stone", "lightning_stone"
+      ]
+    },
+    {
+      "id": "deck_volcanic_tempest",
+      "name": "Volcanic Tempest",
+      "description": "Combine the brute fury of Fire Dragon and Lightning Dragon into the colossal VolcoVolt Dragon, backed by Wind Dragon's Gale Force.",
+      "cards": [
+        "little_dragon", "little_dragon", "little_dragon", "little_dragon",
+        "fire_dragon", "fire_dragon",
+        "lightning_dragon", "lightning_dragon",
+        "wind_dragon", "wind_dragon",
+        "volcovolt_dragon", "volcovolt_dragon",
+        "compass", "compass",
+        "lightning_strike", "lightning_strike",
+        "dragon_elixir", "elemental_shield",
+        "fire_stone", "fire_stone", "fire_stone", "fire_stone",
+        "lightning_stone", "lightning_stone", "lightning_stone",
+        "wind_stone", "wind_stone", "wind_stone"
+      ]
+    },
+    {
+      "id": "deck_techno_frost",
+      "name": "Techno Glacial Core",
+      "description": "Lock down opponents with Ice Dragon's freezing bite and unleash Techno Frost Dragon's Frosting Draw.",
+      "cards": [
+        "little_dragon", "little_dragon", "little_dragon", "little_dragon",
+        "ice_dragon", "ice_dragon",
+        "mechanical_dragon", "mechanical_dragon",
+        "techno_frost_dragon", "techno_frost_dragon",
+        "compass", "compass",
+        "dragon_elixir", "dragon_elixir", "elemental_shield", "elemental_shield",
+        "ice_stone", "ice_stone", "ice_stone", "ice_stone", "ice_stone",
+        "mechanical_stone", "mechanical_stone", "mechanical_stone", "mechanical_stone", "mechanical_stone"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,443 @@
+{
+  "version": "1.0.0",
+  "game_title": "Elemental Beasts TCG - Legacy Reborn",
+  "cards": [
+    {
+      "id": "little_dragon",
+      "name": "Little Dragon",
+      "card_type": "beast",
+      "sub_type": "base_dragon",
+      "element": "neutral",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "hp": 8,
+      "max_hp": 8,
+      "attack": 3,
+      "ability": {
+        "name": "Draconic Potential",
+        "description": "The nascent ancestor of all dragons. Can evolve into any Elemental Dragon when its required Element Stones are paid.",
+        "cost": {},
+        "trigger": "passive"
+      },
+      "evolution_stage": 0,
+      "evolves_from": null,
+      "status": "REMEMBERED"
+    },
+    {
+      "id": "shadow_dragon",
+      "name": "Shadow Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "shadow",
+      "mana_cost": 0,
+      "stone_cost": {
+        "shadow": 2
+      },
+      "hp": 15,
+      "max_hp": 15,
+      "attack": 6,
+      "ability": {
+        "name": "Cloak of Darkness",
+        "description": "Immune to all Spell cards.",
+        "cost": {},
+        "trigger": "passive",
+        "effect": "spell_immunity"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "wind_dragon",
+      "name": "Wind Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "wind",
+      "mana_cost": 0,
+      "stone_cost": {
+        "wind": 2
+      },
+      "hp": 14,
+      "max_hp": 14,
+      "attack": 5,
+      "ability": {
+        "name": "Gale Force",
+        "description": "Discard 1 Stone from the Stone Pile to allow this dragon to attack twice during the turn.",
+        "cost": {
+          "any_stone": 1
+        },
+        "trigger": "activated",
+        "effect": "double_attack"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "fire_dragon",
+      "name": "Fire Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "fire",
+      "mana_cost": 0,
+      "stone_cost": {
+        "fire": 2
+      },
+      "hp": 16,
+      "max_hp": 16,
+      "attack": 7,
+      "ability": {
+        "name": "Flame Burst",
+        "description": "Discard 1 Fire Stone from the Stone Pile: Deal 4 damage to target opposing Beast or Player.",
+        "cost": {
+          "fire": 1
+        },
+        "trigger": "activated",
+        "effect": "direct_damage",
+        "damage": 4
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "lightning_dragon",
+      "name": "Lightning Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "lightning",
+      "mana_cost": 0,
+      "stone_cost": {
+        "lightning": 2
+      },
+      "hp": 14,
+      "max_hp": 14,
+      "attack": 7,
+      "ability": {
+        "name": "Static Discharge",
+        "description": "Discard 1 Lightning Stone from the Stone Pile: Deal 2 damage to all opposing Beasts.",
+        "cost": {
+          "lightning": 1
+        },
+        "trigger": "activated",
+        "effect": "aoe_damage",
+        "damage": 2
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "ice_dragon",
+      "name": "Ice Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "ice",
+      "mana_cost": 0,
+      "stone_cost": {
+        "ice": 2
+      },
+      "hp": 15,
+      "max_hp": 15,
+      "attack": 5,
+      "ability": {
+        "name": "Glacial Frost",
+        "description": "Discard 1 Ice Stone from the Stone Pile: Freeze target opposing Beast for 1 turn (cannot attack).",
+        "cost": {
+          "ice": 1
+        },
+        "trigger": "activated",
+        "effect": "freeze_target"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "mechanical_dragon",
+      "name": "Mechanical Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "mechanical",
+      "mana_cost": 0,
+      "stone_cost": {
+        "mechanical": 2
+      },
+      "hp": 17,
+      "max_hp": 17,
+      "attack": 6,
+      "ability": {
+        "name": "Overclock",
+        "description": "Discard 1 Mechanical Stone from the Stone Pile: Gains +3 Attack this turn.",
+        "cost": {
+          "mechanical": 1
+        },
+        "trigger": "activated",
+        "effect": "buff_attack",
+        "amount": 3
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "water_dragon",
+      "name": "Water Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "water",
+      "mana_cost": 0,
+      "stone_cost": {
+        "water": 2
+      },
+      "hp": 18,
+      "max_hp": 18,
+      "attack": 4,
+      "ability": {
+        "name": "Tidal Restoration",
+        "description": "Discard 1 Water Stone from the Stone Pile: Restore 5 HP to any friendly Beast or Player.",
+        "cost": {
+          "water": 1
+        },
+        "trigger": "activated",
+        "effect": "heal_target",
+        "amount": 5
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "volcovolt_dragon",
+      "name": "VolcoVolt Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "fire_lightning",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 30,
+      "max_hp": 30,
+      "attack": 15,
+      "ability": {
+        "name": "Volcanic Storm",
+        "description": "Discard one Fire Stone and one Lightning Stone from the Stone Pile. Deal 8 damage to two different opposing creatures and apply Stun.",
+        "cost": {
+          "fire": 1,
+          "lightning": 1
+        },
+        "trigger": "activated",
+        "effect": "volcanic_storm",
+        "damage": 8,
+        "target_count": 2,
+        "applies_status": "stun"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "fire_dragon",
+        "lightning_dragon"
+      ],
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "spark_wraith_dragon",
+      "name": "Spark Wraith Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "shadow_lightning",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 27,
+      "max_hp": 27,
+      "attack": 13,
+      "ability": {
+        "name": "VOLCANIC STORM",
+        "description": "DISCARD A SHADOW STONE AND A LIGHTNING STONE FROM YOUR STONE PILE. IF YOU DO, RECOVER 2 SPELL FROM YOUR DISCARD, IF THEY ARE LIGHTNING USE THEM FOR FREE .",
+        "cost": {
+          "shadow": 1,
+          "lightning": 1
+        },
+        "trigger": "activated",
+        "effect": "spell_recovery",
+        "recover_count": 2,
+        "free_cast_element": "lightning"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "shadow_dragon",
+        "lightning_dragon"
+      ],
+      "status": "CONFIRMED",
+      "original_image": "res://assets/original_cards/Spark_Wraith_Dragon.png"
+    },
+    {
+      "id": "techno_frost_dragon",
+      "name": "Techno Frost Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "ice_mechanical",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 27,
+      "max_hp": 27,
+      "attack": 11,
+      "ability": {
+        "name": "Frosting Draw",
+        "description": "Discard one Ice Stone and one Mechanical Stone. Freeze all opposing Beasts. Draw one card for each Beast frozen by this ability.",
+        "cost": {
+          "ice": 1,
+          "mechanical": 1
+        },
+        "trigger": "activated",
+        "effect": "frosting_draw",
+        "applies_status": "freeze"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "ice_dragon",
+        "mechanical_dragon"
+      ],
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "compass",
+      "name": "Compass",
+      "card_type": "support",
+      "sub_type": "item",
+      "element": "neutral",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "ability": {
+        "name": "Stone Seeker",
+        "description": "Search your deck for an Element Stone and add it to your hand.",
+        "effect": "search_stone"
+      },
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "fire_stone",
+      "name": "Fire Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "fire",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Fire Stone resource.",
+      "status": "CONFIRMED_ELEMENT"
+    },
+    {
+      "id": "lightning_stone",
+      "name": "Lightning Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "lightning",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Lightning Stone resource.",
+      "status": "CONFIRMED_ELEMENT"
+    },
+    {
+      "id": "shadow_stone",
+      "name": "Shadow Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "shadow",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Shadow Stone resource.",
+      "status": "CONFIRMED_ELEMENT"
+    },
+    {
+      "id": "wind_stone",
+      "name": "Wind Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "wind",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Wind Stone resource.",
+      "status": "CONFIRMED_ELEMENT"
+    },
+    {
+      "id": "ice_stone",
+      "name": "Ice Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "ice",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Ice Stone resource.",
+      "status": "CONFIRMED_ELEMENT"
+    },
+    {
+      "id": "mechanical_stone",
+      "name": "Mechanical Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "mechanical",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Mechanical Stone resource.",
+      "status": "CONFIRMED_ELEMENT"
+    },
+    {
+      "id": "water_stone",
+      "name": "Water Stone",
+      "card_type": "stone",
+      "sub_type": "element_stone",
+      "element": "water",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "description": "Place into your Stone Pile to provide 1 Water Stone resource.",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "lightning_strike",
+      "name": "Lightning Strike",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "lightning",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Deal 4 damage to target opposing Beast or Player. (Lightning Spell)",
+      "ability": {
+        "name": "Lightning Strike",
+        "effect": "direct_damage",
+        "damage": 4,
+        "spell_element": "lightning"
+      },
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "dragon_elixir",
+      "name": "Dragon Elixir",
+      "card_type": "spell",
+      "sub_type": "support_spell",
+      "element": "neutral",
+      "mana_cost": 1,
+      "stone_cost": {},
+      "description": "Restore 6 HP to any friendly Beast.",
+      "ability": {
+        "name": "Dragon Elixir",
+        "effect": "heal_target",
+        "amount": 6
+      },
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "elemental_shield",
+      "name": "Elemental Shield",
+      "card_type": "spell",
+      "sub_type": "defensive_spell",
+      "element": "neutral",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Target friendly Beast gains +5 Shield HP.",
+      "ability": {
+        "name": "Elemental Shield",
+        "effect": "buff_shield",
+        "amount": 5
+      },
+      "status": "PROVISIONAL"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "elements": [
+    {
+      "id": "fire",
+      "name": "Fire",
+      "color": "#E63946",
+      "secondary_color": "#F4A261",
+      "description": "Blazing draconic fury emphasizing burst damage and direct offensive power.",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning",
+      "color": "#E9C46A",
+      "secondary_color": "#FFD166",
+      "description": "Crackling electric surge delivering area-of-effect damage, stuns, and high-frequency spell synergy.",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "shadow",
+      "name": "Shadow",
+      "color": "#6A0572",
+      "secondary_color": "#240046",
+      "description": "Shrouded darkness granting immunity to enemy spells and debilitating stealth.",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "wind",
+      "name": "Wind",
+      "color": "#2A9D8F",
+      "secondary_color": "#A8DADC",
+      "description": "Tempestuous speed and gale force granting rapid successive attacks.",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "color": "#4EA8DE",
+      "secondary_color": "#90E0EF",
+      "description": "Glacial control freezing opposing beasts and locking down enemy momentum.",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "mechanical",
+      "name": "Mechanical",
+      "color": "#6C757D",
+      "secondary_color": "#ADB5BD",
+      "description": "Clockwork precision and technological augmentation boosting attack through overclocking.",
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "color": "#1D3557",
+      "secondary_color": "#457B9D",
+      "description": "Fluid adaptability restoring vitality and resilience.",
+      "status": "PROVISIONAL"
+    },
+    {
+      "id": "neutral",
+      "name": "Neutral",
+      "color": "#8D99AE",
+      "secondary_color": "#EDF2F4",
+      "description": "Unaspected primal energy, home of Little Dragon and basic support items.",
+      "status": "CONFIRMED"
+    }
+  ]
+}

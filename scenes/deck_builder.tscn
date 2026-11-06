@@ -1,0 +1,119 @@
+[gd_scene load_steps=2 format=3 uid="uid://c515a8t06q17w"]
+
+[ext_resource type="Script" path="res://scripts/ui/deck_builder.gd" id="1_db"]
+
+[node name="DeckBuilder" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_db")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.07, 1)
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 12.0
+offset_right = -20.0
+offset_bottom = 48.0
+grow_horizontal = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "← Back"
+
+[node name="Title" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+text = "ELEMENTAL BEAST TCG — DECK BUILDER"
+
+[node name="Spacer" type="Control" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DeckOption" type="OptionButton" parent="TopBar"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+
+[node name="CountLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 0.4, 1)
+text = "DECK: 27 CARDS"
+
+[node name="SaveButton" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Save Deck"
+
+[node name="DeckLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 56.0
+offset_right = 260.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(0.9, 0.8, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+text = "CURRENT DECK (Click to Remove):"
+
+[node name="DeckScroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 80.0
+offset_right = -20.0
+offset_bottom = 370.0
+grow_horizontal = 2
+vertical_scroll_mode = 0
+
+[node name="DeckContainer" type="HBoxContainer" parent="DeckScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="CatalogLabel" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 376.0
+offset_right = 300.0
+offset_bottom = 396.0
+theme_override_colors/font_color = Color(0.4, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "AVAILABLE CARDS CATALOG (Click to Add):"
+
+[node name="CatalogScroll" type="ScrollContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -315.0
+offset_right = -20.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="CatalogContainer" type="GridContainer" parent="CatalogScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 16
+columns = 6

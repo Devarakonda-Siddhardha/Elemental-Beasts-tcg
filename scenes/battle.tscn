@@ -1,0 +1,349 @@
+[gd_scene load_steps=3 format=3 uid="uid://cxkjv38pm15y"]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_controller.gd" id="1_battle"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.08, 0.09, 0.12, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.28, 0.35, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="Battle" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_battle")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.06, 0.08, 1)
+
+[node name="Board" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="OpponentField" type="Control" parent="Board"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 40.0
+offset_top = 50.0
+offset_right = -320.0
+offset_bottom = 230.0
+grow_horizontal = 2
+
+[node name="BeastSlots" type="HBoxContainer" parent="Board/OpponentField"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="PlayerField" type="Control" parent="Board"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = 40.0
+offset_top = -120.0
+offset_right = -320.0
+offset_bottom = 60.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BeastSlots" type="HBoxContainer" parent="Board/PlayerField"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="PlayerHandScroll" type="ScrollContainer" parent="Board"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = -285.0
+offset_right = -320.0
+offset_bottom = -5.0
+grow_horizontal = 2
+grow_vertical = 0
+vertical_scroll_mode = 0
+
+[node name="HandContainer" type="HBoxContainer" parent="Board/PlayerHandScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="HBoxContainer" parent="HUD"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = -20.0
+offset_bottom = 42.0
+grow_horizontal = 2
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="HUD/TopBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.8, 0.4, 1)
+theme_override_font_sizes/font_size = 16
+text = "ELEMENTAL BEASTS TCG — DUAL RESOURCE ARENA"
+
+[node name="Spacer" type="Control" parent="HUD/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LegacyToggle" type="CheckButton" parent="HUD/TopBar"]
+layout_mode = 2
+text = "Legacy 2024 Art Mode"
+
+[node name="MenuButton" type="Button" parent="HUD/TopBar"]
+layout_mode = 2
+text = "Exit to Menu"
+
+[node name="PlayerPanel" type="Panel" parent="HUD"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 980.0
+offset_top = -340.0
+offset_right = 1260.0
+offset_bottom = -180.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Title" type="Label" parent="HUD/PlayerPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 150.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.4, 0.8, 1, 1)
+text = "PLAYER (YOU)"
+
+[node name="HPLabel" type="Label" parent="HUD/PlayerPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 32.0
+offset_right = 180.0
+offset_bottom = 54.0
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+text = "HP: 30/30"
+
+[node name="ManaLabel" type="Label" parent="HUD/PlayerPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 58.0
+offset_right = 180.0
+offset_bottom = 80.0
+theme_override_colors/font_color = Color(0.3, 0.7, 1, 1)
+text = "MANA: 5/5"
+
+[node name="ManaBar" type="ProgressBar" parent="HUD/PlayerPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 82.0
+offset_right = 268.0
+offset_bottom = 98.0
+max_value = 5.0
+step = 1.0
+value = 5.0
+show_percentage = false
+
+[node name="StonesTitle" type="Label" parent="HUD/PlayerPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 104.0
+offset_right = 150.0
+offset_bottom = 122.0
+theme_override_font_sizes/font_size = 11
+text = "STONE PILE:"
+
+[node name="StonesContainer" type="HBoxContainer" parent="HUD/PlayerPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 124.0
+offset_right = 268.0
+offset_bottom = 154.0
+theme_override_constants/separation = 12
+
+[node name="OpponentPanel" type="Panel" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 50.0
+offset_right = -20.0
+offset_bottom = 210.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Title" type="Label" parent="HUD/OpponentPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 150.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+text = "OPPONENT (AI)"
+
+[node name="HPLabel" type="Label" parent="HUD/OpponentPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 32.0
+offset_right = 180.0
+offset_bottom = 54.0
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+text = "HP: 30/30"
+
+[node name="ManaLabel" type="Label" parent="HUD/OpponentPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 58.0
+offset_right = 180.0
+offset_bottom = 80.0
+theme_override_colors/font_color = Color(0.3, 0.7, 1, 1)
+text = "MANA: 5/5"
+
+[node name="ManaBar" type="ProgressBar" parent="HUD/OpponentPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 82.0
+offset_right = 268.0
+offset_bottom = 98.0
+max_value = 5.0
+step = 1.0
+value = 5.0
+show_percentage = false
+
+[node name="StonesTitle" type="Label" parent="HUD/OpponentPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 104.0
+offset_right = 150.0
+offset_bottom = 122.0
+theme_override_font_sizes/font_size = 11
+text = "STONE PILE:"
+
+[node name="StonesContainer" type="HBoxContainer" parent="HUD/OpponentPanel"]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 124.0
+offset_right = 268.0
+offset_bottom = 154.0
+theme_override_constants/separation = 12
+
+[node name="TurnInfo" type="Panel" parent="HUD"]
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -140.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="TurnLabel" type="Label" parent="HUD/TurnInfo"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 10.0
+offset_right = 120.0
+offset_bottom = 30.0
+text = "TURN 1"
+
+[node name="ActivePlayerLabel" type="Label" parent="HUD/TurnInfo"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 34.0
+offset_right = 260.0
+offset_bottom = 54.0
+theme_override_colors/font_color = Color(0.3, 1, 0.4, 1)
+text = "YOUR TURN"
+
+[node name="EndTurnButton" type="Button" parent="HUD/TurnInfo"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 66.0
+offset_right = 266.0
+offset_bottom = 106.0
+theme_override_font_sizes/font_size = 15
+text = "End Turn"
+
+[node name="LogPanel" type="Panel" parent="HUD"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -170.0
+offset_right = -20.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="LogText" type="RichTextLabel" parent="HUD/LogPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 8.0
+offset_right = -10.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/normal_font_size = 10
+bbcode_enabled = true
+scroll_following = true
+
+[node name="PromptBanner" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 44.0
+offset_bottom = 76.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 15
+text = "Action Prompt"
+horizontal_alignment = 1
+vertical_alignment = 1
