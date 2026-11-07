@@ -6,6 +6,7 @@ signal card_right_clicked(card_ui: CardUI)
 signal card_hovered(card_ui: CardUI, is_hovered: bool)
 
 @export var use_legacy_art: bool = false
+@export var is_compact: bool = false
 
 var card_data: CardData
 var is_selected: bool = false
@@ -58,6 +59,10 @@ func _ready() -> void:
 	if card_data:
 		update_ui()
 
+func set_compact(compact: bool) -> void:
+	is_compact = compact
+	update_ui()
+
 func _ensure_node_references() -> void:
 	if not frame_rect and has_node("FrameRect"): frame_rect = $FrameRect
 	if not art_rect and has_node("ArtRect"): art_rect = $ArtRect
@@ -96,6 +101,84 @@ func setup_from_beast(beast_inst) -> void:
 	current_attack = beast_inst.get_attack()
 	is_on_field = true
 	update_ui()
+
+func _get_element_symbol(el: String) -> String:
+	var clean_el = el.to_lower().replace("_dragon", "").strip_edges()
+	match clean_el:
+		"fire": return "🔥"
+		"lightning": return "⚡"
+		"wind": return "🌪️"
+		"ice": return "❄️"
+		"shadow": return "🌑"
+		"mechanical": return "⚙️"
+		"water": return "💧"
+		"neutral": return "✦"
+		_:
+			if "_" in clean_el:
+				var parts = clean_el.split("_")
+				if parts.size() >= 2:
+					return _get_element_symbol(parts[0]) + _get_element_symbol(parts[1])
+			return "✦"
+
+func _get_symbolic_effect_text() -> String:
+	if not card_data:
+		return ""
+	if card_data.card_type == "stone":
+		return "+1  " + _get_element_symbol(card_data.element) + "  " + card_data.element.capitalize() + " Stone"
+
+	match card_data.id:
+		"inferno_surge": return "⚔️ 5 to Beast  |  ⚔️ 4 to Player"
+		"lightning_strike": return "⚔️ 4 Direct Damage"
+		"zephyr_gust": return "⚔️ 3 Damage  •  🃏 +1 Card"
+		"glacial_freeze": return "⚔️ 2 Damage  •  ❄️ Freeze (1T)"
+		"abyssal_drain": return "⚔️ 3 Damage  •  ❤️ +3 Life"
+		"kinetic_overdrive": return "⚔️ +2 ATK  •  🛡️ +4 Shield"
+		"tidal_surge": return "✨ Cleanse  •  ❤️ +6 HP"
+		"compass": return "🔍 Search Deck ➔ +1 💎 Stone"
+		"dragon_elixir": return "❤️ +5 HP to Beast"
+		"elemental_shield": return "🛡️ +4 Shield HP"
+		"little_dragon": return "🌱 Evolves into any Elemental Dragon (2× 💎)"
+		"shadow_dragon": return "🛡️ Spell Immune"
+		"wind_dragon": return "💎 -1 ➔ ⚔️×2 this turn"
+		"fire_dragon": return "🔥💎 -1 ➔ ⚔️ 4 Direct Damage"
+		"lightning_dragon": return "⚡💎 -1 ➔ ⚔️ 2 to All Foes"
+		"ice_dragon": return "❄️💎 -1 ➔ ❄️ Freeze (1T)"
+		"mechanical_dragon": return "⚙️💎 -1 ➔ ⚔️ +3 ATK (1T)"
+		"water_dragon": return "💧💎 -1 ➔ ❤️ +5 HP"
+		"volcovolt_dragon": return "🔥⚡💎 -1 each ➔ ⚔️ 8 (×2) + ⚡ Stun (1T)"
+		"spark_wraith_dragon": return "🌑⚡💎 -1 each ➔ 🃏 Recover 2 Spells (⚡ Free)"
+		"techno_frost_dragon": return "❄️⚙️💎 -1 each ➔ ❄️ Freeze All + 🃏 Draw per Frozen"
+		"zephyr_shadow_dragon": return "🌑🌪️💎 -1 each ➔ ⚔️×2 Direct to Player"
+		"transcendent_shadow_dragon": return "🛡️ Spell Immune  •  ⚔️ Direct Pierce"
+		"transcendent_fire_dragon": return "🔥💎 -2 ➔ ⚔️ 6 to All Foes"
+		"transcendent_wind_dragon": return "🌪️💎 -1 ➔ ⚔️×3 this turn"
+		"transcendent_lightning_dragon": return "⚔️ Hits apply ⚡ Stun (1T)"
+		"transcendent_ice_dragon": return "❄️ Freeze (1T) attackers on hit"
+		"transcendent_mechanical_dragon": return "🛡️ -3 Damage Taken"
+		"ascended_volcovolt_dragon": return "🔥⚡💎 -2 each ➔ ⚔️ 12 (×2) + ⚡ Stun (1T)"
+		"ascended_spark_wraith_dragon": return "🌑⚡💎 -2 each ➔ 🃏 Recover All Spells (⚡🌑 Free)"
+		"ascended_techno_frost_dragon": return "❄️⚙️💎 -2 each ➔ ❄️ Freeze All + 🃏 +2 per Frozen"
+		"ascended_zephyr_shadow_dragon": return "🌑🌪️💎 -2 each ➔ ⚔️ 10 Split + Direct Strike"
+		"god_dragon": return "🌀 Banish All Foes  •  ⚔️ 10 Direct Damage"
+
+	var raw_desc = ""
+	if card_data.ability and not card_data.ability.is_empty():
+		raw_desc = card_data.ability.get("description", "")
+	if raw_desc == "" and card_data.description != "":
+		raw_desc = card_data.description
+
+	var text = raw_desc
+	text = text.replace("Immune to all Spell cards.", "🛡️ Spell Immune")
+	text = text.replace("Immune to all Spell cards", "🛡️ Spell Immune")
+	text = text.replace("Discard 1 ", "💎 -1 ➔ ")
+	text = text.replace("Spend 1 ", "💎 -1 ➔ ")
+	text = text.replace("attack twice", "⚔️×2")
+	text = text.replace("Applies Stun", "⚡ Stun (1T)")
+	text = text.replace("apply Stun", "⚡ Stun (1T)")
+	text = text.replace("Freeze", "❄️ Freeze (1T)")
+	text = text.replace("damage", "⚔️")
+	text = text.replace("HP", "❤️")
+	return text
 
 func update_ui() -> void:
 	if not card_data:
@@ -162,16 +245,17 @@ func update_ui() -> void:
 	# 6. Artwork
 	load_card_artwork()
 	
-	# 7. Ability Details
-	if card_data.ability and not card_data.ability.is_empty():
+	# 7. Ability Details (Symbol-driven shorthand)
+	var symbolic_desc = _get_symbolic_effect_text()
+	if card_data.card_type == "stone":
+		ability_title_label.text = ""
+		ability_desc_label.text = symbolic_desc
+	elif card_data.ability and not card_data.ability.is_empty():
 		ability_title_label.text = card_data.ability.get("name", "")
-		var ab_desc = card_data.ability.get("description", "")
-		if ab_desc == "" and card_data.description != "":
-			ab_desc = card_data.description
-		ability_desc_label.text = ab_desc
+		ability_desc_label.text = symbolic_desc
 	elif card_data.description != "":
 		ability_title_label.text = "EFFECT"
-		ability_desc_label.text = card_data.description
+		ability_desc_label.text = symbolic_desc
 	else:
 		ability_title_label.text = ""
 		ability_desc_label.text = ""
@@ -191,13 +275,29 @@ func update_ui() -> void:
 		attack_badge.visible = false
 		hp_badge.visible = false
 		
-	# 9. Footer Badge (Evolution or Fusion info)
-	if card_data.sub_type == "fusion_dragon":
-		footer_label.text = "FUSE: " + card_data.fusion_materials[0].replace("_", " ").to_upper() + " + " + card_data.fusion_materials[1].replace("_", " ").to_upper()
+	# 9. Footer Badge (Symbolic Evolution / Transcendence / Fusion / Ascension / God info)
+	if card_data.id == "god_dragon":
+		footer_label.text = "👑 🔥⚡🌪️❄️🌑⚙️"
+		$FooterBadge.visible = true
+		_set_rect($FooterBadge, 45, 233, 155, 251)
+	elif card_data.sub_type == "ascended_dragon" and card_data.fusion_materials.size() >= 2:
+		var m1 = card_data.fusion_materials[0]
+		var m2 = card_data.fusion_materials[1]
+		footer_label.text = "👑 3×" + _get_element_symbol(m1) + " + 3×" + _get_element_symbol(m2)
+		$FooterBadge.visible = true
+		_set_rect($FooterBadge, 45, 233, 155, 251)
+	elif card_data.sub_type == "fusion_dragon" and card_data.fusion_materials.size() >= 2:
+		var m1 = card_data.fusion_materials[0]
+		var m2 = card_data.fusion_materials[1]
+		footer_label.text = "🔗 " + _get_element_symbol(m1) + " + " + _get_element_symbol(m2)
+		$FooterBadge.visible = true
+		_set_rect($FooterBadge, 55, 233, 145, 251)
+	elif card_data.sub_type == "transcendent_dragon":
+		footer_label.text = "⭐ 5× " + _get_element_symbol(card_data.element)
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 55, 233, 145, 251)
 	elif card_data.evolution_stage == 1:
-		footer_label.text = "EVOLVES FROM LITTLE DRAGON"
+		footer_label.text = "🌱 ➔ 2× " + _get_element_symbol(card_data.element)
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 55, 233, 145, 251)
 	else:
@@ -223,17 +323,74 @@ func _set_rect(c: Control, l: float, t: float, r: float, b: float) -> void:
 
 ## Aligns text to the plaques baked into each frame family so nothing overlaps.
 func _apply_frame_layout() -> void:
-	name_label.visible = true
-	type_label.visible = true
-	ability_title_label.visible = ability_title_label.text != ""
-	# Light text for dark frames, dark text for light parchment frames
-	ability_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var dark_ink = Color(0.14, 0.09, 0.05, 1.0)
 	var dark_shadow = Color(1.0, 0.95, 0.85, 0.45)
 	var light_ink = Color(0.96, 0.95, 0.92, 1.0)
 	var light_shadow = Color(0.0, 0.0, 0.0, 0.95)
 	var gold_title = Color(1.0, 0.88, 0.38, 1.0)
 	var dark_title = Color(0.32, 0.16, 0.04, 1.0)
+
+	if is_compact:
+		type_label.visible = false
+		ability_title_label.visible = false
+		ability_desc_label.visible = false
+		if has_node("AbilityBox"):
+			$AbilityBox.visible = false
+		if has_node("FooterBadge"):
+			$FooterBadge.visible = false
+		if status_tag:
+			status_tag.visible = false
+
+		if card_data.card_type == "stone":
+			name_label.visible = false
+			element_icon.visible = false
+			cost_badge.visible = false
+		else:
+			name_label.visible = true
+			_set_rect(name_label, 44, 14, 156, 36)
+			if card_data.name.length() <= 14:
+				name_label.add_theme_font_size_override("font_size", 12)
+			else:
+				name_label.add_theme_font_size_override("font_size", 11)
+			name_label.add_theme_color_override("font_color", light_ink)
+			name_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+			name_label.add_theme_constant_override("shadow_outline_size", 4)
+			var pill_style = StyleBoxFlat.new()
+			pill_style.bg_color = Color(0.05, 0.05, 0.08, 0.68)
+			pill_style.corner_radius_top_left = 6
+			pill_style.corner_radius_top_right = 6
+			pill_style.corner_radius_bottom_left = 6
+			pill_style.corner_radius_bottom_right = 6
+			name_label.add_theme_stylebox_override("normal", pill_style)
+
+			_set_rect(art_rect, 22, 48, 178, 218)
+
+		if card_data.card_type == "beast":
+			attack_label.add_theme_font_size_override("font_size", 18)
+			attack_label.add_theme_constant_override("shadow_outline_size", 4)
+			hp_label.add_theme_font_size_override("font_size", 18)
+			hp_label.add_theme_constant_override("shadow_outline_size", 4)
+		return
+
+	# Non-compact (full card inspector / collection / deck builder) mode
+	if has_node("AbilityBox"):
+		$AbilityBox.visible = true
+	name_label.visible = true
+	name_label.remove_theme_stylebox_override("normal")
+	name_label.add_theme_constant_override("shadow_outline_size", 2)
+	type_label.visible = true
+	ability_title_label.visible = ability_title_label.text != ""
+	ability_desc_label.visible = true
+	ability_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ability_desc_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ability_desc_label.add_theme_font_size_override("font_size", 10)
+	footer_label.add_theme_font_size_override("font_size", 10)
+
+	if card_data.card_type == "beast":
+		attack_label.add_theme_font_size_override("font_size", 14)
+		attack_label.add_theme_constant_override("shadow_outline_size", 2)
+		hp_label.add_theme_font_size_override("font_size", 14)
+		hp_label.add_theme_constant_override("shadow_outline_size", 2)
 
 	# Default font sizing for name
 	if card_data.name.length() <= 13:

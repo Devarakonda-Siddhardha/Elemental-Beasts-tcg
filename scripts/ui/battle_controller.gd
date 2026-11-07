@@ -48,7 +48,7 @@ var preview_card: CardUI = null
 @onready var log_label: RichTextLabel = $LogPanel/LogText
 @onready var prompt_banner: Label = $PromptBanner
 
-@onready var legacy_toggle_button: CheckButton = $LegacyToggle
+@onready var legacy_toggle_button: Button = $LegacyToggle
 @onready var menu_button: Button = $MenuButton
 
 func _ready() -> void:
@@ -79,9 +79,8 @@ func _ready() -> void:
 		
 	_build_static_ui()
 	# Start match
+	log_message("[color=#ffd166]◆ Duel Started — 30 ❤️ | 5 💧[/color]")
 	game_state.start_game()
-	log_message("[color=#ffd166]Welcome to Elemental Beasts TCG - Legacy Reborn![/color]")
-	log_message("Both players start with 30 HP and receive 5 Mana refreshed each turn.")
 	refresh_full_ui()
 
 func refresh_full_ui() -> void:
@@ -103,6 +102,8 @@ func _build_static_ui() -> void:
 	# Deck / Discard / Banish grid (opponent row, then your row)
 	for c in piles_grid.get_children():
 		c.queue_free()
+	var zone_tooltips = {"Deck": "Deck", "Discard": "Discard Pile", "Banish": "Banish Zone"}
+	var zone_symbols = {"Deck": "🃏 0", "Discard": "💀 0", "Banish": "🌀 0"}
 	for owner in ["enemy", "player"]:
 		for zone in ["Deck", "Discard", "Banish"]:
 			var cell = PanelContainer.new()
@@ -114,9 +115,10 @@ func _build_static_ui() -> void:
 			cell.add_theme_stylebox_override("panel", sb)
 			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			cell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			cell.tooltip_text = zone_tooltips[zone]
 			var v = VBoxContainer.new()
 			v.alignment = BoxContainer.ALIGNMENT_CENTER
-			v.add_theme_constant_override("separation", 0)
+			v.add_theme_constant_override("separation", 2)
 			var icon = TextureRect.new()
 			icon.custom_minimum_size = Vector2(0, 44)
 			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -124,13 +126,13 @@ func _build_static_ui() -> void:
 			if zone != "Banish":
 				icon.texture = load("res://assets/art/card_back.png")
 				if zone == "Discard":
-					icon.modulate = Color(0.7, 0.6, 0.6)
+					icon.modulate = Color(0.75, 0.45, 0.5)
 			else:
 				icon.texture = load("res://assets/icons/shadow.png") if ResourceLoader.exists("res://assets/icons/shadow.png") else null
 			var lbl = Label.new()
 			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			lbl.add_theme_font_size_override("font_size", 10)
-			lbl.text = zone + "\n(0)"
+			lbl.add_theme_font_size_override("font_size", 11)
+			lbl.text = zone_symbols[zone]
 			v.add_child(icon)
 			v.add_child(lbl)
 			cell.add_child(v)
@@ -177,12 +179,12 @@ func update_hud() -> void:
 	refresh_stones_display(1, opponent_stones_container)
 
 	if pile_labels.has("player_Deck"):
-		pile_labels["player_Deck"].text = "Deck\n(" + str(game_state.player_decks[0].size()) + ")"
-		pile_labels["player_Discard"].text = "Discard\n(" + str(game_state.player_discards[0].size()) + ")"
-		pile_labels["player_Banish"].text = "Banish\n(0)"
-		pile_labels["enemy_Deck"].text = "Deck\n(" + str(game_state.player_decks[1].size()) + ")"
-		pile_labels["enemy_Discard"].text = "Discard\n(" + str(game_state.player_discards[1].size()) + ")"
-		pile_labels["enemy_Banish"].text = "Banish\n(0)"
+		pile_labels["player_Deck"].text = "🃏 " + str(game_state.player_decks[0].size())
+		pile_labels["player_Discard"].text = "💀 " + str(game_state.player_discards[0].size())
+		pile_labels["player_Banish"].text = "🌀 0"
+		pile_labels["enemy_Deck"].text = "🃏 " + str(game_state.player_decks[1].size())
+		pile_labels["enemy_Discard"].text = "💀 " + str(game_state.player_discards[1].size())
+		pile_labels["enemy_Banish"].text = "🌀 0"
 
 	turn_label.text = "TURN " + str(game_state.turn_number)
 	if game_state.active_player_id == 0:
@@ -203,10 +205,11 @@ func refresh_stones_display(player_id: int, container: HBoxContainer) -> void:
 		var col: Color = ELEMENT_UI_COLORS.get(el, Color.WHITE)
 		var v = VBoxContainer.new()
 		v.custom_minimum_size = Vector2(42, 0)
-		v.add_theme_constant_override("separation", 0)
+		v.alignment = BoxContainer.ALIGNMENT_CENTER
+		v.add_theme_constant_override("separation", 2)
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var icon = TextureRect.new()
-		icon.custom_minimum_size = Vector2(0, 24)
+		icon.custom_minimum_size = Vector2(30, 30)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		var icon_path = "res://assets/icons/" + el + ".png"
@@ -214,17 +217,12 @@ func refresh_stones_display(player_id: int, container: HBoxContainer) -> void:
 			icon.texture = load(icon_path)
 		if count == 0:
 			icon.modulate = Color(1, 1, 1, 0.45)
-		var name_lbl = Label.new()
-		name_lbl.text = "MECH" if el == "mechanical" else el.to_upper()
-		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_lbl.add_theme_font_size_override("font_size", 8)
-		name_lbl.add_theme_color_override("font_color", col)
 		var cnt = Label.new()
 		cnt.text = "×" + str(count)
 		cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		cnt.add_theme_font_size_override("font_size", 12)
+		cnt.add_theme_font_size_override("font_size", 13)
+		cnt.add_theme_color_override("font_color", col if count > 0 else Color(0.6, 0.6, 0.65, 0.55))
 		v.add_child(icon)
-		v.add_child(name_lbl)
 		v.add_child(cnt)
 		container.add_child(v)
 
@@ -232,6 +230,7 @@ func _wrap_card(card_ui: CardUI, s: float) -> Control:
 	var holder = Control.new()
 	holder.custom_minimum_size = Vector2(200, 278) * s
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_ui.set("is_compact", true)
 	holder.add_child(card_ui)
 	card_ui.base_scale = Vector2(s, s)
 	card_ui.scale = card_ui.base_scale
@@ -246,17 +245,23 @@ func _on_any_card_hovered(card_ui: CardUI, is_hovered: bool) -> void:
 	if preview_card == null:
 		preview_card = card_ui_prefab.instantiate()
 		preview_card.hover_zoom = false
+		preview_card.set("is_compact", false)
 		preview_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		preview_holder.add_child(preview_card)
 		preview_card.scale = Vector2(PREVIEW_CARD_SCALE, PREVIEW_CARD_SCALE)
 		preview_card.position = -Vector2(100, 139) * (1.0 - PREVIEW_CARD_SCALE)
 		if preview_holder.has_node("Hint"):
 			preview_holder.get_node("Hint").visible = false
+	preview_card.set("is_compact", false)
+	if preview_card.has_method("set_compact"):
+		preview_card.set_compact(false)
 	if card_ui.beast_instance_ref:
 		preview_card.setup_from_beast(card_ui.beast_instance_ref)
 		preview_card.is_on_field = false
 	else:
 		preview_card.setup(card_ui.card_data, use_legacy_art)
+	if preview_card.has_method("set_compact"):
+		preview_card.set_compact(false)
 
 func refresh_player_hand() -> void:
 	for child in player_hand_container.get_children():
@@ -277,11 +282,20 @@ func refresh_player_hand() -> void:
 		sep = mini(-18, int((avail - cw * hand.size()) / float(hand.size() - 1)))
 	player_hand_container.add_theme_constant_override("separation", sep)
 
+	var mid = (hand.size() - 1) * 0.5
+	var first_card_ui: CardUI = null
 	for i in range(hand.size()):
 		var card: CardData = hand[i]
 		var card_ui: CardUI = card_ui_prefab.instantiate()
 		player_hand_container.add_child(_wrap_card(card_ui, HAND_CARD_SCALE))
 		card_ui.setup(card, use_legacy_art)
+		if card_ui.has_method("set_compact"):
+			card_ui.set_compact(true)
+		var offset_from_mid = float(i) - mid
+		card_ui.rotation_degrees = offset_from_mid * 2.2
+		card_ui.position.y += abs(offset_from_mid) * 3.5
+		if first_card_ui == null:
+			first_card_ui = card_ui
 
 		var playable = false
 		if game_state.active_player_id == 0:
@@ -319,6 +333,9 @@ func refresh_player_hand() -> void:
 		var h_idx = i
 		card_ui.card_clicked.connect(func(c): _on_hand_card_clicked(c, h_idx))
 
+	if preview_card == null and first_card_ui != null:
+		_on_any_card_hovered(first_card_ui, true)
+
 func refresh_fields() -> void:
 	for child in player_field_container.get_children():
 		child.queue_free()
@@ -327,6 +344,8 @@ func refresh_fields() -> void:
 		var c_ui: CardUI = card_ui_prefab.instantiate()
 		player_field_container.add_child(_wrap_card(c_ui, FIELD_CARD_SCALE))
 		c_ui.setup_from_beast(b)
+		if c_ui.has_method("set_compact"):
+			c_ui.set_compact(true)
 		c_ui.set_attack_ready(b.can_attack(game_state.turn_number) and game_state.active_player_id == 0)
 		if b.stun_turns > 0:
 			c_ui.set_status_display("stun", b.stun_turns)
@@ -343,6 +362,8 @@ func refresh_fields() -> void:
 		var c_ui: CardUI = card_ui_prefab.instantiate()
 		opponent_field_container.add_child(_wrap_card(c_ui, FIELD_CARD_SCALE))
 		c_ui.setup_from_beast(b)
+		if c_ui.has_method("set_compact"):
+			c_ui.set_compact(true)
 		if b.stun_turns > 0:
 			c_ui.set_status_display("stun", b.stun_turns)
 		elif b.freeze_turns > 0:
@@ -361,10 +382,10 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		if game_state.play_stone_from_hand(0, hand_index):
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_stone_place()
-			log_message("[color=#2a9d8f]You placed " + card.name + " into your Stone Pile.[/color]")
+			log_message("  💎 Placed [b]" + card.name + "[/b]")
 			refresh_full_ui()
 		else:
-			log_message("[color=#e76f51]Already placed a Stone this turn (limit 1/turn).[/color]")
+			log_message("[color=#e76f51]  ⚠️ Limit 1 Stone/turn[/color]")
 		return
 		
 	# If Little Dragon -> summon directly
@@ -374,10 +395,10 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_card_play()
 				get_node("/root/SoundManager").play_mana_spend()
-			log_message("[color=#e9c46a]Summoned Little Dragon for 2 Mana.[/color]")
+			log_message("  🐉 Summoned [b]" + beast.card_data.name + "[/b]")
 			refresh_full_ui()
 		else:
-			log_message("[color=#e76f51]Cannot summon Little Dragon (requires 2 Mana and field space).[/color]")
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧 & field space[/color]")
 		return
 		
 	# If Compass -> cast directly
@@ -387,10 +408,10 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_spell()
 				get_node("/root/SoundManager").play_mana_spend()
-			log_message("[color=#f4a261]Compass: " + res.details + "[/color]")
+			log_message("  🧭 Compass: " + res.details)
 			refresh_full_ui()
 		else:
-			log_message("[color=#e76f51]Compass failed: " + res.error + "[/color]")
+			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 		return
 		
 	# If Evolution card -> enter evolving mode
@@ -408,10 +429,10 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_fusion()
 				get_node("/root/SoundManager").play_stone_spend()
-			log_message("[color=#ffb703]ELEMENTAL FUSION! " + card.name + " emerges onto the battlefield![/color]")
+			log_message("  ✨ Fused into [b]" + fused.card_data.name + "[/b]")
 			refresh_full_ui()
 		else:
-			log_message("[color=#e76f51]Cannot fuse " + card.name + ". Required materials not on field.[/color]")
+			log_message("[color=#e76f51]  ⚠️ Missing fusion materials[/color]")
 		return
 
 	# If Transcendent card -> enter transcending mode
@@ -437,10 +458,10 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_fusion()
 				get_node("/root/SoundManager").play_victory()
-			log_message("[color=#ffd700][b]THE GOD DRAGON DESCENDS![/b] Genesis Roar banishes all enemy beasts and deals 10 direct damage![/color]")
+			log_message("  ✨ [b]God Dragon[/b] descended!")
 			refresh_full_ui()
 		else:
-			log_message("[color=#e76f51]God Dragon Ritual failed: " + res.error + "[/color]")
+			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 		return
 		
 	# If Spell card -> enter targeting mode
@@ -464,9 +485,9 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 				if has_node("/root/SoundManager"):
 					get_node("/root/SoundManager").play_evolution()
 					get_node("/root/SoundManager").play_stone_spend()
-				log_message("[color=#48cae4]DRAGON EVOLUTION! Little Dragon evolved into " + beast.card_data.name + "![/color]")
+				log_message("  ✨ Evolved into [b]" + beast.card_data.name + "[/b]")
 			else:
-				log_message("[color=#e76f51]Evolution failed. Insufficient stones or invalid target.[/color]")
+				log_message("[color=#e76f51]  ⚠️ Evolution failed[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -480,9 +501,9 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 				if has_node("/root/SoundManager"):
 					get_node("/root/SoundManager").play_evolution()
 					get_node("/root/SoundManager").play_stone_spend()
-				log_message("[color=#e0aaff]TRANSCENDENCE ACHIEVED! " + res_beast.card_data.name + " descends with pure elemental majesty![/color]")
+				log_message("  ✨ Transcended into [b]" + res_beast.card_data.name + "[/b]")
 			else:
-				log_message("[color=#e76f51]Transcendence failed. Insufficient stones or invalid target.[/color]")
+				log_message("[color=#e76f51]  ⚠️ Transcendence failed[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -496,9 +517,9 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 				if has_node("/root/SoundManager"):
 					get_node("/root/SoundManager").play_fusion()
 					get_node("/root/SoundManager").play_stone_spend()
-				log_message("[color=#ffd166]DRAGON ASCENSION! " + res_beast.card_data.name + " transcends mortal limits![/color]")
+				log_message("  ✨ Ascended into [b]" + res_beast.card_data.name + "[/b]")
 			else:
-				log_message("[color=#e76f51]Ascension failed. Insufficient stones or invalid target.[/color]")
+				log_message("[color=#e76f51]  ⚠️ Ascension failed[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -512,9 +533,9 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 				if has_node("/root/SoundManager"):
 					get_node("/root/SoundManager").play_spell()
 					get_node("/root/SoundManager").play_mana_spend()
-				log_message("[color=#00b4d8]Spell cast on " + beast.card_data.name + "![/color]")
+				log_message("  🪄 Cast spell on [b]" + beast.card_data.name + "[/b]")
 			else:
-				log_message("[color=#e76f51]Spell failed: " + res.error + "[/color]")
+				log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -536,10 +557,10 @@ func _on_player_field_right_clicked(card_ui: CardUI, field_index: int) -> void:
 	if res.success:
 		if has_node("/root/SoundManager"):
 			get_node("/root/SoundManager").play_spell()
-		log_message("[color=#ffb703]" + beast.card_data.name + " activated ability: " + res.details + "[/color]")
+		log_message("  ⚡ [b]" + beast.card_data.name + "[/b]: " + res.details)
 		refresh_full_ui()
 	else:
-		log_message("[color=#e76f51]Ability failed: " + res.error + "[/color]")
+		log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 
 func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 	if current_action_mode == "attacking" and selected_field_beast_ui:
@@ -550,9 +571,9 @@ func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_attack()
 				get_node("/root/SoundManager").play_damage()
-			log_message("[color=#e63946]Combat: " + res.details + "[/color]")
+			log_message("  ⚔️ [b]" + res.get("attacker_name", attacker.card_data.name) + "[/b] ➔ " + str(res.get("damage_dealt", attacker.get_attack())) + " dmg")
 		else:
-			log_message("[color=#e76f51]Attack failed: " + res.error + "[/color]")
+			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -567,9 +588,9 @@ func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 				if has_node("/root/SoundManager"):
 					get_node("/root/SoundManager").play_spell()
 					get_node("/root/SoundManager").play_mana_spend()
-				log_message("[color=#00b4d8]Spell cast on " + target.card_data.name + "![/color]")
+				log_message("  🪄 Cast spell on [b]" + target.card_data.name + "[/b]")
 			else:
-				log_message("[color=#e76f51]Spell failed: " + res.error + "[/color]")
+				log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 		reset_action_mode()
 		refresh_full_ui()
 		return
@@ -583,9 +604,9 @@ func _on_opponent_panel_input(event: InputEvent) -> void:
 				if has_node("/root/SoundManager"):
 					get_node("/root/SoundManager").play_attack()
 					get_node("/root/SoundManager").play_damage()
-				log_message("[color=#e63946]DIRECT HIT: " + res.details + "[/color]")
+				log_message("  ⚔️ [b]" + res.get("attacker_name", attacker.card_data.name) + "[/b] ➔ " + str(res.get("damage_dealt", attacker.get_attack())) + " dmg")
 			else:
-				log_message("[color=#e76f51]Direct attack failed: " + res.error + "[/color]")
+				log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 			reset_action_mode()
 			refresh_full_ui()
 		elif current_action_mode == "targeting_spell" and selected_hand_card_ui:
@@ -597,9 +618,9 @@ func _on_opponent_panel_input(event: InputEvent) -> void:
 					if has_node("/root/SoundManager"):
 						get_node("/root/SoundManager").play_spell()
 						get_node("/root/SoundManager").play_damage()
-					log_message("[color=#00b4d8]Spell cast directly on Opponent![/color]")
+					log_message("  🪄 Cast spell on Opponent")
 				else:
-					log_message("[color=#e76f51]Spell failed: " + res.error + "[/color]")
+					log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 			reset_action_mode()
 			refresh_full_ui()
 
@@ -623,7 +644,7 @@ func _on_end_turn_pressed() -> void:
 			timer.timeout.connect(func():
 				var logs = ai_controller.execute_turn()
 				for l in logs:
-					log_message("[color=#a8dadc]" + l + "[/color]")
+					log_message("[color=#a8dadc]  " + l + "[/color]")
 				refresh_full_ui()
 			)
 
@@ -631,7 +652,7 @@ func _on_turn_started(turn: int, player_id: int) -> void:
 	if has_node("/root/SoundManager"):
 		get_node("/root/SoundManager").play_turn_change()
 		get_node("/root/SoundManager").play_mana_refresh()
-	log_message("[b]Turn " + str(turn) + " started for Player " + str(player_id + 1) + " (Mana refreshed to 5)[/b]")
+	log_message("[color=#7bdff2]◆ Turn " + str(turn) + " — " + ("You" if player_id == 0 else "Opponent") + "[/color]")
 	update_hud()
 
 func _on_turn_ended(turn: int, player_id: int) -> void:
@@ -639,7 +660,7 @@ func _on_turn_ended(turn: int, player_id: int) -> void:
 
 func _on_card_drawn(player_id: int, card: CardData) -> void:
 	if player_id == 0:
-		log_message("You drew " + card.name + ".")
+		log_message("  🃏 Drew [b]" + card.name + "[/b]")
 
 func _on_beast_summoned(player_id: int, beast: BeastInstance) -> void:
 	pass

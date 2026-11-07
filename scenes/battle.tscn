@@ -358,9 +358,9 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -350.0
+offset_left = -384.0
 offset_top = 8.0
-offset_right = -72.0
+offset_right = -104.0
 offset_bottom = 92.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("SB_gold_panel")
@@ -388,18 +388,42 @@ offset_bottom = -4.0
 theme_override_constants/separation = 2
 alignment = 1
 
+[node name="LegacyToggle" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -96.0
+offset_top = 8.0
+offset_right = -54.0
+offset_bottom = 48.0
+grow_horizontal = 0
+tooltip_text = "Toggle Legacy 2024 Art"
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_gold_panel")
+theme_override_styles/hover = SubResource("SB_gold_panel")
+theme_override_styles/pressed = SubResource("SB_endturn")
+toggle_mode = true
+text = "🎨"
+
 [node name="MenuButton" type="Button" parent="."]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -64.0
+offset_left = -48.0
 offset_top = 8.0
 offset_right = -8.0
 offset_bottom = 48.0
 grow_horizontal = 0
-theme_override_font_sizes/font_size = 11
-text = "MENU"
+tooltip_text = "Exit to Main Menu"
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("SB_gold_panel")
+theme_override_styles/hover = SubResource("SB_gold_panel")
+theme_override_styles/pressed = SubResource("SB_endturn")
+text = "☰"
 
 [node name="SelectedPanel" type="Panel" parent="."]
 layout_mode = 0
@@ -614,7 +638,7 @@ anchor_right = 1.0
 offset_left = -228.0
 offset_top = 244.0
 offset_right = -8.0
-offset_bottom = 524.0
+offset_bottom = 556.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("SB_gold_panel")
 
@@ -642,18 +666,6 @@ theme_override_font_sizes/normal_font_size = 11
 bbcode_enabled = true
 scroll_following = true
 
-[node name="LegacyToggle" type="CheckButton" parent="."]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -228.0
-offset_top = 528.0
-offset_right = -8.0
-offset_bottom = 556.0
-grow_horizontal = 0
-theme_override_font_sizes/font_size = 11
-text = "Legacy 2024 Art"
 
 [node name="PlayerStonePanel" type="Panel" parent="."]
 layout_mode = 1
