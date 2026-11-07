@@ -984,7 +984,7 @@ func _show_start_of_match_coin_flip(player_deck: Array, ai_deck: Array) -> void:
 	vbox.add_child(sub)
 
 	var coin_holder = Control.new()
-	coin_holder.custom_minimum_size = Vector2(240, 240)
+	coin_holder.custom_minimum_size = Vector2(256, 256)
 	coin_holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(coin_holder)
 
@@ -994,9 +994,9 @@ func _show_start_of_match_coin_flip(player_deck: Array, ai_deck: Array) -> void:
 	coin_tex.texture = heads_tex
 	coin_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	coin_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	coin_tex.size = Vector2(220, 220)
-	coin_tex.position = Vector2(10, 10)
-	coin_tex.pivot_offset = Vector2(110, 110)
+	coin_tex.size = Vector2(240, 240)
+	coin_tex.position = Vector2(8, 8)
+	coin_tex.pivot_offset = Vector2(120, 120)
 	coin_holder.add_child(coin_tex)
 
 	var status_lbl = Label.new()
