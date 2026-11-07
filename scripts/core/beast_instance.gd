@@ -90,3 +90,19 @@ func turn_refresh() -> void:
 		stun_turns -= 1
 	if freeze_turns > 0:
 		freeze_turns -= 1
+
+func apply_status(status_name: String, turns: int) -> void:
+	if status_name == "freeze":
+		freeze_turns = maxi(freeze_turns, turns)
+	elif status_name == "stun":
+		stun_turns = maxi(stun_turns, turns)
+
+func is_frozen() -> bool:
+	return freeze_turns > 0
+
+func is_stunned() -> bool:
+	return stun_turns > 0
+
+func cleanse() -> void:
+	freeze_turns = 0
+	stun_turns = 0

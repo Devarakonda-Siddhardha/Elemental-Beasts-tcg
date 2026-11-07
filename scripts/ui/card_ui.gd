@@ -56,14 +56,35 @@ func _ready() -> void:
 	if card_data:
 		update_ui()
 
+func _ensure_node_references() -> void:
+	if not frame_rect and has_node("FrameRect"): frame_rect = $FrameRect
+	if not art_rect and has_node("ArtRect"): art_rect = $ArtRect
+	if not element_icon and has_node("ElementIcon"): element_icon = $ElementIcon
+	if not cost_label and has_node("CostBadge/CostLabel"): cost_label = $CostBadge/CostLabel
+	if not cost_badge and has_node("CostBadge"): cost_badge = $CostBadge
+	if not cost_icon and has_node("CostBadge/CostIcon"): cost_icon = $CostBadge/CostIcon
+	if not name_label and has_node("NameLabel"): name_label = $NameLabel
+	if not type_label and has_node("TypeLabel"): type_label = $TypeLabel
+	if not ability_title_label and has_node("AbilityBox/AbilityTitle"): ability_title_label = $AbilityBox/AbilityTitle
+	if not ability_desc_label and has_node("AbilityBox/AbilityDesc"): ability_desc_label = $AbilityBox/AbilityDesc
+	if not footer_label and has_node("FooterBadge/FooterLabel"): footer_label = $FooterBadge/FooterLabel
+	if not attack_badge and has_node("AttackBadge"): attack_badge = $AttackBadge
+	if not attack_label and has_node("AttackBadge/AttackLabel"): attack_label = $AttackBadge/AttackLabel
+	if not hp_badge and has_node("HPBadge"): hp_badge = $HPBadge
+	if not hp_label and has_node("HPBadge/HPLabel"): hp_label = $HPBadge/HPLabel
+	if not status_tag and has_node("StatusTag"): status_tag = $StatusTag
+	if not selection_glow and has_node("SelectionGlow"): selection_glow = $SelectionGlow
+	if not playable_glow and has_node("PlayableGlow"): playable_glow = $PlayableGlow
+	if not attack_glow and has_node("AttackGlow"): attack_glow = $AttackGlow
+	if not status_overlay and has_node("StatusOverlay"): status_overlay = $StatusOverlay
+
 func setup(p_card_data: CardData, p_legacy_art: bool = false) -> void:
 	card_data = p_card_data
 	use_legacy_art = p_legacy_art
 	current_hp = card_data.hp
 	max_hp = card_data.max_hp
 	current_attack = card_data.attack
-	if is_inside_tree():
-		update_ui()
+	update_ui()
 
 func setup_from_beast(beast_inst) -> void:
 	beast_instance_ref = beast_inst
@@ -72,12 +93,12 @@ func setup_from_beast(beast_inst) -> void:
 	max_hp = beast_inst.max_hp
 	current_attack = beast_inst.get_attack()
 	is_on_field = true
-	if is_inside_tree():
-		update_ui()
+	update_ui()
 
 func update_ui() -> void:
 	if not card_data:
 		return
+	_ensure_node_references()
 		
 	# 1. Select Template Frame by Element & Type
 	var template_path = get_template_path(card_data.element, card_data.card_type, card_data.sub_type, card_data.fusion_materials)
@@ -213,12 +234,43 @@ func load_card_artwork() -> void:
 			art_rect.texture = load(path)
 			return
 
-	# Remastered or modern artwork
-	var art_path = "res://assets/art/" + card_data.id + ".jpg"
-	if ResourceLoader.exists(art_path):
-		art_rect.texture = load(art_path)
+	# For Stone cards, template is full carved art - no separate illustration overlay
+	if card_data.card_type == "stone":
+		art_rect.texture = null
 		return
-		
+
+	# Remastered or modern artwork (.jpg or .png)
+	var art_path_jpg = "res://assets/art/" + card_data.id + ".jpg"
+	var art_path_png = "res://assets/art/" + card_data.id + ".png"
+	if ResourceLoader.exists(art_path_jpg):
+		art_rect.texture = load(art_path_jpg)
+		return
+	elif ResourceLoader.exists(art_path_png):
+		art_rect.texture = load(art_path_png)
+		return
+
+	# Ascended dragon fallback to base fusion dragon art
+	if card_data.sub_type == "ascended_dragon" and not card_data.ascends_from.is_empty():
+		var base_art_jpg = "res://assets/art/" + card_data.ascends_from + ".jpg"
+		var base_art_png = "res://assets/art/" + card_data.ascends_from + ".png"
+		if ResourceLoader.exists(base_art_jpg):
+			art_rect.texture = load(base_art_jpg)
+			return
+		elif ResourceLoader.exists(base_art_png):
+			art_rect.texture = load(base_art_png)
+			return
+
+	# Transcendent dragon fallback to base elemental dragon art
+	if card_data.sub_type == "transcendent_dragon" and not card_data.evolves_from.is_empty():
+		var base_art_jpg = "res://assets/art/" + card_data.evolves_from + ".jpg"
+		var base_art_png = "res://assets/art/" + card_data.evolves_from + ".png"
+		if ResourceLoader.exists(base_art_jpg):
+			art_rect.texture = load(base_art_jpg)
+			return
+		elif ResourceLoader.exists(base_art_png):
+			art_rect.texture = load(base_art_png)
+			return
+
 	# Element icon fallback
 	var icon_path = "res://assets/icons/" + card_data.element.to_lower() + ".png"
 	if ResourceLoader.exists(icon_path):

@@ -94,16 +94,6 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_attack")
 
-[node name="ArtRect" type="TextureRect" parent="."]
-layout_mode = 0
-offset_left = 22.0
-offset_top = 52.0
-offset_right = 178.0
-offset_bottom = 142.0
-mouse_filter = 2
-expand_mode = 1
-stretch_mode = 6
-
 [node name="FrameRect" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -114,6 +104,16 @@ grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("2_8n3qm")
 expand_mode = 1
+
+[node name="ArtRect" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 53.0
+offset_right = 176.0
+offset_bottom = 137.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
 
 [node name="NameLabel" type="Label" parent="."]
 layout_mode = 0

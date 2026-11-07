@@ -400,6 +400,22 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		refresh_full_ui()
 		return
 		
+	if current_action_mode == "targeting_spell" and selected_hand_card_ui:
+		var hand = game_state.get_hand(0)
+		var h_idx = hand.find(selected_hand_card_ui.card_data)
+		if h_idx != -1:
+			var res = game_state.cast_spell(0, h_idx, beast)
+			if res.success:
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_spell()
+					get_node("/root/SoundManager").play_mana_spend()
+				log_message("[color=#00b4d8]Spell cast on " + beast.card_data.name + "![/color]")
+			else:
+				log_message("[color=#e76f51]Spell failed: " + res.error + "[/color]")
+		reset_action_mode()
+		refresh_full_ui()
+		return
+
 	# Select beast to attack with
 	if beast.can_attack(game_state.turn_number) and game_state.active_player_id == 0:
 		selected_field_beast_ui = card_ui
@@ -467,6 +483,20 @@ func _on_opponent_panel_input(event: InputEvent) -> void:
 				log_message("[color=#e63946]DIRECT HIT: " + res.details + "[/color]")
 			else:
 				log_message("[color=#e76f51]Direct attack failed: " + res.error + "[/color]")
+			reset_action_mode()
+			refresh_full_ui()
+		elif current_action_mode == "targeting_spell" and selected_hand_card_ui:
+			var hand = game_state.get_hand(0)
+			var h_idx = hand.find(selected_hand_card_ui.card_data)
+			if h_idx != -1:
+				var res = game_state.cast_spell(0, h_idx, null)
+				if res.success:
+					if has_node("/root/SoundManager"):
+						get_node("/root/SoundManager").play_spell()
+						get_node("/root/SoundManager").play_damage()
+					log_message("[color=#00b4d8]Spell cast directly on Opponent![/color]")
+				else:
+					log_message("[color=#e76f51]Spell failed: " + res.error + "[/color]")
 			reset_action_mode()
 			refresh_full_ui()
 

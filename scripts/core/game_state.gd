@@ -119,9 +119,13 @@ func get_default_deck_ids() -> Array[String]:
 		"ascended_spark_wraith_dragon",
 		"god_dragon",
 		"compass", "compass", "compass",
-		"lightning_strike", "lightning_strike", "lightning_strike",
-		"dragon_elixir", "dragon_elixir",
-		"elemental_shield", "elemental_shield",
+		"lightning_strike",
+		"inferno_surge",
+		"zephyr_gust",
+		"glacial_freeze",
+		"abyssal_drain",
+		"kinetic_overdrive",
+		"dragon_elixir",
 		"shadow_stone", "shadow_stone", "shadow_stone", "shadow_stone", "shadow_stone",
 		"lightning_stone", "lightning_stone", "lightning_stone", "lightning_stone", "lightning_stone",
 		"fire_stone",
@@ -434,19 +438,63 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 	match effect:
 		"direct_damage":
 			var dmg = card.ability.get("damage", 4)
+			var p_dmg = card.ability.get("player_damage", dmg)
+			if target_beast:
+				target_beast.take_damage(dmg)
+			else:
+				var enemy_id = 1 if player_id == 0 else 0
+				deal_player_damage(enemy_id, p_dmg)
+		"heal_target":
+			var amt = card.ability.get("amount", 6)
+			if target_beast:
+				target_beast.heal(amt)
+			else:
+				heal_player(player_id, amt)
+		"buff_shield":
+			var amt = card.ability.get("amount", 5)
+			if target_beast:
+				target_beast.shield_hp += amt
+		"wind_gust":
+			var dmg = card.ability.get("damage", 3)
 			if target_beast:
 				target_beast.take_damage(dmg)
 			else:
 				var enemy_id = 1 if player_id == 0 else 0
 				deal_player_damage(enemy_id, dmg)
-		"heal_target":
-			var amt = card.ability.get("amount", 6)
+			var draws = card.ability.get("draw_count", 1)
+			for d in range(draws):
+				draw_card(player_id)
+		"freeze_target":
+			var dmg = card.ability.get("damage", 2)
+			var turns = card.ability.get("freeze_turns", 1)
 			if target_beast:
-				target_beast.heal(amt)
-		"buff_shield":
-			var amt = card.ability.get("amount", 5)
+				target_beast.take_damage(dmg)
+				target_beast.apply_status("freeze", turns)
+			else:
+				var enemy_id = 1 if player_id == 0 else 0
+				deal_player_damage(enemy_id, dmg)
+		"life_drain":
+			var dmg = card.ability.get("damage", 3)
+			var heal = card.ability.get("heal_amount", 3)
 			if target_beast:
-				target_beast.shield_hp += amt
+				target_beast.take_damage(dmg)
+			else:
+				var enemy_id = 1 if player_id == 0 else 0
+				deal_player_damage(enemy_id, dmg)
+			heal_player(player_id, heal)
+		"buff_beast":
+			var atk = card.ability.get("attack_buff", 2)
+			var shd = card.ability.get("shield_amount", 4)
+			if target_beast:
+				target_beast.bonus_attack += atk
+				target_beast.shield_hp += shd
+		"cleanse_and_heal":
+			var heal = card.ability.get("heal_amount", 6)
+			if target_beast:
+				target_beast.cleanse()
+				target_beast.heal(heal)
+			else:
+				heal_player(player_id, heal)
 				
 	cleanup_dead_beasts()
 	spell_cast.emit(player_id, card)
@@ -500,6 +548,9 @@ func deal_player_damage(player_id: int, amount: int) -> void:
 	if player_hp[player_id] <= 0:
 		var winning_player = 1 if player_id == 0 else 0
 		end_game(winning_player, "Player " + str(player_id + 1) + "'s HP reached 0.")
+
+func heal_player(player_id: int, amount: int) -> void:
+	player_hp[player_id] = mini(RulesConfig.STARTING_PLAYER_HP, player_hp[player_id] + amount)
 
 func cleanup_dead_beasts() -> void:
 	for p in range(2):

@@ -66,6 +66,8 @@ func run_all_tests() -> void:
 	test_23_god_dragon_ritual_from_hand_and_one_per_duel()
 	test_24_procedural_playmat_generation()
 	test_25_supporter_card_artworks()
+	test_26_lightning_dragon_artwork_and_layering()
+	test_27_elemental_spells_for_each_element()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -522,3 +524,91 @@ func test_25_supporter_card_artworks() -> void:
 	for sid in supporter_ids:
 		var art_path = "res://assets/art/" + sid + ".jpg"
 		assert_true(FileAccess.file_exists(art_path), "Requirement 25: Supporter card '" + sid + "' has its own dedicated artwork", art_path)
+
+func test_26_lightning_dragon_artwork_and_layering() -> void:
+	var card_scene = load("res://scenes/card_ui.tscn")
+	assert_true(card_scene != null, "Requirement 26a: card_ui.tscn loads successfully")
+	var card_ui = card_scene.instantiate()
+	root.add_child(card_ui)
+	
+	# Verify ArtRect is placed AFTER FrameRect so artwork is rendered inside slot and not obscured
+	var frame_idx = card_ui.get_node("FrameRect").get_index()
+	var art_idx = card_ui.get_node("ArtRect").get_index()
+	assert_true(art_idx > frame_idx, "Requirement 26b: ArtRect is rendered after FrameRect (visible in slot)", "ArtRect idx: " + str(art_idx) + ", FrameRect idx: " + str(frame_idx))
+	
+	# Verify Lightning Dragon loads artwork
+	var db = CardData.load_database()
+	card_ui.setup(db["lightning_dragon"])
+	var art_rect: TextureRect = card_ui.get_node("ArtRect")
+	assert_true(art_rect.texture != null, "Requirement 26c: Lightning Dragon loads dedicated artwork into ArtRect")
+	
+	# Verify fallback for Ascended Spark Wraith Dragon
+	card_ui.setup(db["ascended_spark_wraith_dragon"])
+	assert_true(art_rect.texture != null, "Requirement 26d: Ascended Spark Wraith Dragon has valid dragon artwork (fallback/dedicated)")
+	
+	# Verify fallback for Transcendent Shadow Dragon
+	card_ui.setup(db["transcendent_shadow_dragon"])
+	assert_true(art_rect.texture != null, "Requirement 26e: Transcendent Shadow Dragon has valid dragon artwork (fallback/dedicated)")
+	
+	root.remove_child(card_ui)
+	card_ui.free()
+
+func test_27_elemental_spells_for_each_element() -> void:
+	var state = GameState.new()
+	var db = state.card_db
+	
+	var elemental_spells = {
+		"fire": "inferno_surge",
+		"lightning": "lightning_strike",
+		"wind": "zephyr_gust",
+		"ice": "glacial_freeze",
+		"shadow": "abyssal_drain",
+		"mechanical": "kinetic_overdrive",
+		"water": "tidal_surge"
+	}
+	
+	for el in elemental_spells:
+		var spell_id = elemental_spells[el]
+		assert_true(db.has(spell_id), "Requirement 27a: Database has spell for " + el + " ('" + spell_id + "')")
+		var card: CardData = db[spell_id]
+		assert_true(card.card_type == "spell", "Requirement 27b: '" + spell_id + "' is a spell card")
+		assert_true(card.element == el, "Requirement 27c: '" + spell_id + "' is element " + el)
+		assert_true(card.mana_cost == 2, "Requirement 27d: '" + spell_id + "' costs 2 Mana")
+		
+		# Verify artwork exists
+		var art_path = "res://assets/art/" + spell_id + ".jpg"
+		assert_true(FileAccess.file_exists(art_path), "Requirement 27e: Spell '" + spell_id + "' has dedicated artwork", art_path)
+
+	# Test casting elemental spells
+	state.start_game()
+	var target_enemy = BeastInstance.create(db["little_dragon"], 1, 1)
+	state.player_fields[1] = [target_enemy]
+	var friendly_beast = BeastInstance.create(db["little_dragon"], 0, 1)
+	state.player_fields[0] = [friendly_beast]
+	
+	# 1. Fire: Inferno Surge deals 5 damage
+	state.player_hands[0] = [db["inferno_surge"]]
+	state.get_mana(0).current_mana = 5
+	var hp_before = target_enemy.current_hp
+	var res_fire = state.cast_spell(0, 0, target_enemy)
+	assert_true(res_fire.success and target_enemy.current_hp == hp_before - 5, "Requirement 27f: Inferno Surge deals 5 damage to target beast")
+	
+	# 2. Ice: Glacial Freeze deals 2 damage and freezes
+	state.player_hands[0] = [db["glacial_freeze"]]
+	state.get_mana(0).current_mana = 5
+	var res_ice = state.cast_spell(0, 0, target_enemy)
+	assert_true(res_ice.success and target_enemy.is_frozen(), "Requirement 27g: Glacial Freeze freezes target beast")
+	
+	# 3. Mechanical: Kinetic Overdrive buffs attack +2 and shield +4
+	state.player_hands[0] = [db["kinetic_overdrive"]]
+	state.get_mana(0).current_mana = 5
+	var atk_before = friendly_beast.get_attack()
+	var res_mech = state.cast_spell(0, 0, friendly_beast)
+	assert_true(res_mech.success and friendly_beast.get_attack() == atk_before + 2 and friendly_beast.shield_hp >= 4, "Requirement 27h: Kinetic Overdrive buffs friendly beast attack +2 and shield +4")
+	
+	# 4. Shadow: Abyssal Drain deals 3 damage and heals player 3 HP
+	state.player_hp[0] = 20
+	state.player_hands[0] = [db["abyssal_drain"]]
+	state.get_mana(0).current_mana = 5
+	var res_shadow = state.cast_spell(0, 0, target_enemy)
+	assert_true(res_shadow.success and state.player_hp[0] == 23, "Requirement 27i: Abyssal Drain heals player for 3 HP")

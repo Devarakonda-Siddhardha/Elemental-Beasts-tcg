@@ -468,6 +468,113 @@
       "status": "PROVISIONAL"
     },
     {
+      "id": "inferno_surge",
+      "name": "Inferno Surge",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "fire",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Unleash blazing dragon fire. Deal 5 damage to target opposing Beast, or 4 damage to opposing Player. (Fire Spell)",
+      "ability": {
+        "name": "Inferno Surge",
+        "effect": "direct_damage",
+        "damage": 5,
+        "player_damage": 4,
+        "spell_element": "fire"
+      },
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "zephyr_gust",
+      "name": "Zephyr Gust",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "wind",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Summon a gale-force squall. Deal 3 damage to target opposing Beast or Player, and draw 1 card from your deck. (Wind Spell)",
+      "ability": {
+        "name": "Zephyr Gust",
+        "effect": "wind_gust",
+        "damage": 3,
+        "draw_count": 1,
+        "spell_element": "wind"
+      },
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "glacial_freeze",
+      "name": "Glacial Freeze",
+      "card_type": "spell",
+      "sub_type": "control_spell",
+      "element": "ice",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Freeze the target in sub-zero ice. Deal 2 damage to target opposing Beast and Freeze it for 1 turn. (Ice Spell)",
+      "ability": {
+        "name": "Glacial Freeze",
+        "effect": "freeze_target",
+        "damage": 2,
+        "freeze_turns": 1,
+        "spell_element": "ice"
+      },
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "abyssal_drain",
+      "name": "Abyssal Drain",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "shadow",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Siphon life essence into the void. Deal 3 damage to target opposing Beast or Player, and restore 3 HP to your Player. (Shadow Spell)",
+      "ability": {
+        "name": "Abyssal Drain",
+        "effect": "life_drain",
+        "damage": 3,
+        "heal_amount": 3,
+        "spell_element": "shadow"
+      },
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "kinetic_overdrive",
+      "name": "Kinetic Overdrive",
+      "card_type": "spell",
+      "sub_type": "buff_spell",
+      "element": "mechanical",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Overclock mechanical armor and weapons. Target friendly Beast gains +2 Attack and +4 Shield HP. (Mechanical Spell)",
+      "ability": {
+        "name": "Kinetic Overdrive",
+        "effect": "buff_beast",
+        "attack_buff": 2,
+        "shield_amount": 4,
+        "spell_element": "mechanical"
+      },
+      "status": "CONFIRMED"
+    },
+    {
+      "id": "tidal_surge",
+      "name": "Tidal Surge",
+      "card_type": "spell",
+      "sub_type": "support_spell",
+      "element": "water",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "A purifying deluge cleanses all corruption. Restore 6 HP to target friendly Beast or Player and remove all negative status effects. (Water Spell)",
+      "ability": {
+        "name": "Tidal Surge",
+        "effect": "cleanse_and_heal",
+        "heal_amount": 6,
+        "spell_element": "water"
+      },
+      "status": "CONFIRMED"
+    },
+    {
       "id": "transcendent_shadow_dragon",
       "name": "Transcendent Shadow Dragon",
       "card_type": "beast",
