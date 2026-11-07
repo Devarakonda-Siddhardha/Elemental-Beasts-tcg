@@ -13,39 +13,43 @@ var selected_field_beast_ui: CardUI = null
 var current_action_mode: String = "none" # "none", "evolving", "fusing", "attacking", "targeting_spell", "targeting_ability"
 
 # UI Nodes
-@onready var player_hp_label: Label = $HUD/PlayerPanel/HPLabel
-@onready var player_hp_bar: ProgressBar = $HUD/PlayerPanel/HPBar
-@onready var player_mana_label: Label = $HUD/PlayerPanel/ManaLabel
-@onready var player_mana_bar: ProgressBar = $HUD/PlayerPanel/ManaBar
-@onready var player_stones_container: HBoxContainer = $HUD/PlayerPanel/StonesContainer
+const FIELD_CARD_SCALE: float = 0.64
+const HAND_CARD_SCALE: float = 0.6
+const PREVIEW_CARD_SCALE: float = 1.15
+const ELEMENT_UI_COLORS = {
+	"fire": Color(1.0, 0.4, 0.2), "lightning": Color(1.0, 0.85, 0.2), "wind": Color(0.3, 0.95, 0.55),
+	"ice": Color(0.4, 0.85, 1.0), "shadow": Color(0.78, 0.45, 1.0), "mechanical": Color(0.85, 0.8, 0.75)
+}
 
-@onready var opponent_panel: Panel = $HUD/OpponentPanel
-@onready var opponent_hp_label: Label = $HUD/OpponentPanel/HPLabel
-@onready var opponent_hp_bar: ProgressBar = $HUD/OpponentPanel/HPBar
-@onready var opponent_mana_label: Label = $HUD/OpponentPanel/ManaLabel
-@onready var opponent_mana_bar: ProgressBar = $HUD/OpponentPanel/ManaBar
-@onready var opponent_stones_container: HBoxContainer = $HUD/OpponentPanel/StonesContainer
+@onready var player_hp_label: Label = $PlayerBar/LifeCrest/HPLabel
+@onready var player_mana_label: Label = $PlayerBar/ManaLabel
+@onready var player_mana_pips: HBoxContainer = $PlayerBar/ManaPips
+@onready var player_stones_container: HBoxContainer = $PlayerStonePanel/StonesContainer
 
-@onready var player_deck_count_label: Label = $Board/PilesLeft/PlayerDeckBox/Label
-@onready var player_discard_count_label: Label = $Board/PilesLeft/PlayerDiscardBox/Label
-@onready var player_discard_preview: TextureRect = $Board/PilesLeft/PlayerDiscardBox/Slot/Preview
+@onready var opponent_panel: Panel = $OpponentBar
+@onready var opponent_hp_label: Label = $OpponentBar/LifeCrest/HPLabel
+@onready var opponent_mana_label: Label = $OpponentBar/ManaLabel
+@onready var opponent_mana_pips: HBoxContainer = $OpponentBar/ManaPips
+@onready var opponent_stones_container: HBoxContainer = $OpponentStonePanel/StonesContainer
 
-@onready var enemy_deck_count_label: Label = $Board/PilesLeft/EnemyDeckBox/Label
-@onready var enemy_discard_count_label: Label = $Board/PilesLeft/EnemyDiscardBox/Label
-@onready var enemy_discard_preview: TextureRect = $Board/PilesLeft/EnemyDiscardBox/Slot/Preview
+@onready var piles_grid: GridContainer = $PilesPanel/Grid
+var pile_labels: Dictionary = {}
 
-@onready var player_hand_container: HBoxContainer = $Board/PlayerHandScroll/HandContainer
-@onready var player_field_container: HBoxContainer = $Board/PlayerField/BeastSlots
-@onready var opponent_field_container: HBoxContainer = $Board/OpponentField/BeastSlots
+@onready var preview_holder: Control = $SelectedPanel/PreviewHolder
+var preview_card: CardUI = null
 
-@onready var turn_label: Label = $HUD/TurnInfo/TurnLabel
-@onready var active_player_label: Label = $HUD/TurnInfo/ActivePlayerLabel
-@onready var end_turn_button: Button = $HUD/TurnInfo/EndTurnButton
-@onready var log_label: RichTextLabel = $HUD/LogPanel/LogText
-@onready var prompt_banner: Label = $HUD/PromptBanner
+@onready var player_hand_container: HBoxContainer = $HandArea/HandContainer
+@onready var player_field_container: HBoxContainer = $PlayerField/BeastSlots
+@onready var opponent_field_container: HBoxContainer = $OpponentField/BeastSlots
 
-@onready var legacy_toggle_button: CheckButton = $HUD/TopBar/LegacyToggle
-@onready var menu_button: Button = $HUD/TopBar/MenuButton
+@onready var turn_label: Label = $TurnPanel/TurnLabel
+@onready var active_player_label: Label = $TurnPanel/ActivePlayerLabel
+@onready var end_turn_button: Button = $TurnPanel/EndTurnButton
+@onready var log_label: RichTextLabel = $LogPanel/LogText
+@onready var prompt_banner: Label = $PromptBanner
+
+@onready var legacy_toggle_button: CheckButton = $LegacyToggle
+@onready var menu_button: Button = $MenuButton
 
 func _ready() -> void:
 	game_state = GameState.new()
@@ -69,10 +73,11 @@ func _ready() -> void:
 		
 	if opponent_panel:
 		opponent_panel.gui_input.connect(_on_opponent_panel_input)
-	var opp_field = $Board/OpponentField
+	var opp_field = $OpponentField
 	if opp_field:
 		opp_field.gui_input.connect(_on_opponent_panel_input)
 		
+	_build_static_ui()
 	# Start match
 	game_state.start_game()
 	log_message("[color=#ffd166]Welcome to Elemental Beasts TCG - Legacy Reborn![/color]")
@@ -84,52 +89,101 @@ func refresh_full_ui() -> void:
 	refresh_player_hand()
 	refresh_fields()
 
+func _build_static_ui() -> void:
+	# Neon slot frames behind both battlefields (blue = opponent, amber = you)
+	for pair in [[$OpponentField/SlotFrames, Color(0.25, 0.7, 1.0)], [$PlayerField/SlotFrames, Color(1.0, 0.6, 0.15)]]:
+		var box: HBoxContainer = pair[0]
+		for c in box.get_children():
+			c.queue_free()
+		for i in range(RulesConfig.MAX_FIELD_BEASTS):
+			var sf = SlotFrame.new()
+			sf.accent = pair[1]
+			sf.custom_minimum_size = Vector2(200, 278) * FIELD_CARD_SCALE
+			box.add_child(sf)
+	# Deck / Discard / Banish grid (opponent row, then your row)
+	for c in piles_grid.get_children():
+		c.queue_free()
+	for owner in ["enemy", "player"]:
+		for zone in ["Deck", "Discard", "Banish"]:
+			var cell = PanelContainer.new()
+			var sb = StyleBoxFlat.new()
+			sb.bg_color = Color(0.05, 0.03, 0.1, 0.85)
+			sb.set_border_width_all(1)
+			sb.border_color = Color(0.7, 0.55, 0.25, 0.8) if owner == "player" else Color(0.4, 0.6, 0.9, 0.8)
+			sb.set_corner_radius_all(6)
+			cell.add_theme_stylebox_override("panel", sb)
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			var v = VBoxContainer.new()
+			v.alignment = BoxContainer.ALIGNMENT_CENTER
+			v.add_theme_constant_override("separation", 0)
+			var icon = TextureRect.new()
+			icon.custom_minimum_size = Vector2(0, 44)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			if zone != "Banish":
+				icon.texture = load("res://assets/art/card_back.png")
+				if zone == "Discard":
+					icon.modulate = Color(0.7, 0.6, 0.6)
+			else:
+				icon.texture = load("res://assets/icons/shadow.png") if ResourceLoader.exists("res://assets/icons/shadow.png") else null
+			var lbl = Label.new()
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.add_theme_font_size_override("font_size", 10)
+			lbl.text = zone + "\n(0)"
+			v.add_child(icon)
+			v.add_child(lbl)
+			cell.add_child(v)
+			piles_grid.add_child(cell)
+			pile_labels[owner + "_" + zone] = lbl
+
+func _update_mana_pips(container: HBoxContainer, current: int) -> void:
+	if container.get_child_count() != RulesConfig.MAX_NORMAL_MANA:
+		for c in container.get_children():
+			c.queue_free()
+		for i in range(RulesConfig.MAX_NORMAL_MANA):
+			var p = Panel.new()
+			p.custom_minimum_size = Vector2(22, 22)
+			p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			container.add_child(p)
+	for i in range(container.get_child_count()):
+		var p: Panel = container.get_child(i)
+		var sb = StyleBoxFlat.new()
+		sb.set_corner_radius_all(11)
+		sb.set_border_width_all(2)
+		if i < current:
+			sb.bg_color = Color(0.2, 0.65, 1.0)
+			sb.border_color = Color(0.75, 0.95, 1.0)
+			sb.shadow_color = Color(0.3, 0.7, 1.0, 0.6)
+			sb.shadow_size = 4
+		else:
+			sb.bg_color = Color(0.18, 0.18, 0.22)
+			sb.border_color = Color(0.45, 0.45, 0.5)
+		p.add_theme_stylebox_override("panel", sb)
+
 func update_hud() -> void:
-	# Player 0 HUD
 	var p_hp = game_state.player_hp[0]
-	player_hp_label.text = "HP: " + str(p_hp) + "/30"
-	if player_hp_bar:
-		player_hp_bar.value = p_hp
+	player_hp_label.text = str(p_hp)
 	var p_mana = game_state.get_mana(0).current_mana
-	player_mana_label.text = "MANA: " + str(p_mana) + "/5"
-	player_mana_bar.value = p_mana
+	player_mana_label.text = "MANA  " + str(p_mana) + "/" + str(RulesConfig.MAX_NORMAL_MANA)
+	_update_mana_pips(player_mana_pips, p_mana)
 	refresh_stones_display(0, player_stones_container)
-	
-	# Opponent HUD
+
 	var op_hp = game_state.player_hp[1]
-	opponent_hp_label.text = "HP: " + str(op_hp) + "/30"
-	if opponent_hp_bar:
-		opponent_hp_bar.value = op_hp
+	opponent_hp_label.text = str(op_hp)
 	var op_mana = game_state.get_mana(1).current_mana
-	opponent_mana_label.text = "MANA: " + str(op_mana) + "/5"
-	opponent_mana_bar.value = op_mana
+	opponent_mana_label.text = "MANA  " + str(op_mana) + "/" + str(RulesConfig.MAX_NORMAL_MANA)
+	_update_mana_pips(opponent_mana_pips, op_mana)
 	refresh_stones_display(1, opponent_stones_container)
-	
-	# Piles Tracking
-	if player_deck_count_label:
-		player_deck_count_label.text = "DECK: " + str(game_state.player_decks[0].size())
-	if enemy_deck_count_label:
-		enemy_deck_count_label.text = "ENEMY DECK: " + str(game_state.player_decks[1].size())
-		
-	if player_discard_count_label:
-		var p_disc = game_state.player_discards[0]
-		player_discard_count_label.text = "DISCARD: " + str(p_disc.size())
-		if player_discard_preview and not p_disc.is_empty():
-			var top_card: CardData = p_disc[-1]
-			var tpath = CardUI.get_template_path(top_card.element, top_card.card_type, top_card.sub_type)
-			if ResourceLoader.exists(tpath):
-				player_discard_preview.texture = load(tpath)
-				
-	if enemy_discard_count_label:
-		var op_disc = game_state.player_discards[1]
-		enemy_discard_count_label.text = "DISCARD: " + str(op_disc.size())
-		if enemy_discard_preview and not op_disc.is_empty():
-			var top_card: CardData = op_disc[-1]
-			var tpath = CardUI.get_template_path(top_card.element, top_card.card_type, top_card.sub_type)
-			if ResourceLoader.exists(tpath):
-				enemy_discard_preview.texture = load(tpath)
-	
-	# Turn Info
+
+	if pile_labels.has("player_Deck"):
+		pile_labels["player_Deck"].text = "Deck\n(" + str(game_state.player_decks[0].size()) + ")"
+		pile_labels["player_Discard"].text = "Discard\n(" + str(game_state.player_discards[0].size()) + ")"
+		pile_labels["player_Banish"].text = "Banish\n(0)"
+		pile_labels["enemy_Deck"].text = "Deck\n(" + str(game_state.player_decks[1].size()) + ")"
+		pile_labels["enemy_Discard"].text = "Discard\n(" + str(game_state.player_discards[1].size()) + ")"
+		pile_labels["enemy_Banish"].text = "Banish\n(0)"
+
 	turn_label.text = "TURN " + str(game_state.turn_number)
 	if game_state.active_player_id == 0:
 		active_player_label.text = "YOUR TURN"
@@ -143,41 +197,92 @@ func update_hud() -> void:
 func refresh_stones_display(player_id: int, container: HBoxContainer) -> void:
 	for child in container.get_children():
 		child.queue_free()
-		
 	var stone_mgr = game_state.get_stones(player_id)
 	for el in RulesConfig.CONFIRMED_ELEMENTS:
 		var count = stone_mgr.get_stone_count(el)
-		if count > 0:
-			var badge = HBoxContainer.new()
-			var icon = TextureRect.new()
-			icon.custom_minimum_size = Vector2(24, 24)
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			var icon_path = "res://assets/icons/" + el + ".png"
-			if ResourceLoader.exists(icon_path):
-				icon.texture = load(icon_path)
-			var lbl = Label.new()
-			lbl.text = "x" + str(count)
-			badge.add_child(icon)
-			badge.add_child(lbl)
-			container.add_child(badge)
+		var col: Color = ELEMENT_UI_COLORS.get(el, Color.WHITE)
+		var v = VBoxContainer.new()
+		v.custom_minimum_size = Vector2(42, 0)
+		v.add_theme_constant_override("separation", 0)
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var icon = TextureRect.new()
+		icon.custom_minimum_size = Vector2(0, 24)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var icon_path = "res://assets/icons/" + el + ".png"
+		if ResourceLoader.exists(icon_path):
+			icon.texture = load(icon_path)
+		if count == 0:
+			icon.modulate = Color(1, 1, 1, 0.45)
+		var name_lbl = Label.new()
+		name_lbl.text = "MECH" if el == "mechanical" else el.to_upper()
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.add_theme_font_size_override("font_size", 8)
+		name_lbl.add_theme_color_override("font_color", col)
+		var cnt = Label.new()
+		cnt.text = "×" + str(count)
+		cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cnt.add_theme_font_size_override("font_size", 12)
+		v.add_child(icon)
+		v.add_child(name_lbl)
+		v.add_child(cnt)
+		container.add_child(v)
+
+func _wrap_card(card_ui: CardUI, s: float) -> Control:
+	var holder = Control.new()
+	holder.custom_minimum_size = Vector2(200, 278) * s
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(card_ui)
+	card_ui.base_scale = Vector2(s, s)
+	card_ui.scale = card_ui.base_scale
+	# CardUI pivots around its centre (100,139); compensate so it sits in the holder
+	card_ui.position = -Vector2(100, 139) * (1.0 - s)
+	card_ui.card_hovered.connect(_on_any_card_hovered)
+	return holder
+
+func _on_any_card_hovered(card_ui: CardUI, is_hovered: bool) -> void:
+	if not is_hovered or card_ui == null or card_ui.card_data == null:
+		return
+	if preview_card == null:
+		preview_card = card_ui_prefab.instantiate()
+		preview_card.hover_zoom = false
+		preview_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		preview_holder.add_child(preview_card)
+		preview_card.scale = Vector2(PREVIEW_CARD_SCALE, PREVIEW_CARD_SCALE)
+		preview_card.position = -Vector2(100, 139) * (1.0 - PREVIEW_CARD_SCALE)
+		if preview_holder.has_node("Hint"):
+			preview_holder.get_node("Hint").visible = false
+	if card_ui.beast_instance_ref:
+		preview_card.setup_from_beast(card_ui.beast_instance_ref)
+		preview_card.is_on_field = false
+	else:
+		preview_card.setup(card_ui.card_data, use_legacy_art)
 
 func refresh_player_hand() -> void:
 	for child in player_hand_container.get_children():
 		child.queue_free()
-		
+
 	var hand = game_state.get_hand(0)
 	var mana_mgr = game_state.get_mana(0)
 	var stone_mgr = game_state.get_stones(0)
 	var field = game_state.get_field(0)
-	
+
+	# Fan/overlap cards so the whole hand fits the hand area
+	var cw = 200.0 * HAND_CARD_SCALE
+	var avail = player_hand_container.get_parent().size.x
+	if avail <= 0:
+		avail = 700.0
+	var sep = -18
+	if hand.size() > 1:
+		sep = mini(-18, int((avail - cw * hand.size()) / float(hand.size() - 1)))
+	player_hand_container.add_theme_constant_override("separation", sep)
+
 	for i in range(hand.size()):
 		var card: CardData = hand[i]
 		var card_ui: CardUI = card_ui_prefab.instantiate()
-		player_hand_container.add_child(card_ui)
+		player_hand_container.add_child(_wrap_card(card_ui, HAND_CARD_SCALE))
 		card_ui.setup(card, use_legacy_art)
-		
-		# Determine playability
+
 		var playable = false
 		if game_state.active_player_id == 0:
 			if card.card_type == "stone" and stone_mgr.can_place_stone():
@@ -209,19 +314,18 @@ func refresh_player_hand() -> void:
 				playable = true
 			elif card.card_type == "spell" and mana_mgr.can_spend(card.mana_cost):
 				playable = true
-				
+
 		card_ui.set_playable(playable)
 		var h_idx = i
 		card_ui.card_clicked.connect(func(c): _on_hand_card_clicked(c, h_idx))
 
 func refresh_fields() -> void:
-	# Player 0 Field
 	for child in player_field_container.get_children():
 		child.queue_free()
 	for i in range(game_state.player_fields[0].size()):
 		var b: BeastInstance = game_state.player_fields[0][i]
 		var c_ui: CardUI = card_ui_prefab.instantiate()
-		player_field_container.add_child(c_ui)
+		player_field_container.add_child(_wrap_card(c_ui, FIELD_CARD_SCALE))
 		c_ui.setup_from_beast(b)
 		c_ui.set_attack_ready(b.can_attack(game_state.turn_number) and game_state.active_player_id == 0)
 		if b.stun_turns > 0:
@@ -231,14 +335,13 @@ func refresh_fields() -> void:
 		var f_idx = i
 		c_ui.card_clicked.connect(func(c): _on_player_field_clicked(c, f_idx))
 		c_ui.card_right_clicked.connect(func(c): _on_player_field_right_clicked(c, f_idx))
-		
-	# Opponent Field
+
 	for child in opponent_field_container.get_children():
 		child.queue_free()
 	for i in range(game_state.player_fields[1].size()):
 		var b: BeastInstance = game_state.player_fields[1][i]
 		var c_ui: CardUI = card_ui_prefab.instantiate()
-		opponent_field_container.add_child(c_ui)
+		opponent_field_container.add_child(_wrap_card(c_ui, FIELD_CARD_SCALE))
 		c_ui.setup_from_beast(b)
 		if b.stun_turns > 0:
 			c_ui.set_status_display("stun", b.stun_turns)

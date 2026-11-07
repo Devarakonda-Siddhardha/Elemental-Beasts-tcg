@@ -64,34 +64,79 @@ func _draw() -> void:
 	if w <= 0 or h <= 0:
 		return
 
-	var gs = _get_game_state()
-
-	# 1. Base Dark Slate / Obsidian Surface & Noise Texture
-	_draw_mat_surface(w, h)
-
-	# 2. 4 Corner Elemental Dragon Auras
+	# Fantasy sky arena backdrop (all HUD panels / slots are real UI nodes)
+	_draw_sky_arena(w, h)
 	_draw_corner_dragon_auras(w, h)
 
-	# 3. Outer Stitched Playmat Perimeter
-	_draw_stitched_borders(w, h)
+# ==============================================================================
+# 0. Fantasy Sky Arena (purple twilight sky, floating peaks, glowing altar ring)
+# ==============================================================================
+func _draw_sky_arena(w: float, h: float) -> void:
+	# Vertical twilight gradient
+	var bands = 48
+	var top_col = Color(0.10, 0.05, 0.22)
+	var mid_col = Color(0.36, 0.16, 0.48)
+	var low_col = Color(0.12, 0.06, 0.20)
+	for i in range(bands):
+		var t = float(i) / float(bands - 1)
+		var c: Color
+		if t < 0.5:
+			c = top_col.lerp(mid_col, t / 0.5)
+		else:
+			c = mid_col.lerp(low_col, (t - 0.5) / 0.5)
+		draw_rect(Rect2(0, h * float(i) / bands, w, h / bands + 1.0), c)
 
-	# 4. Top & Bottom Ornate Status Pods (Life, Mana Gems, Stone Pile)
-	_draw_top_bar_pods(w, h, gs)
-	_draw_bottom_bar_pods(w, h, gs)
+	# Noise clouds
+	if _noise_texture:
+		var step = 512.0
+		var x = 0.0
+		while x < w:
+			var y = 0.0
+			while y < h:
+				draw_texture_rect(_noise_texture, Rect2(x, y, step, step), false, Color(0.85, 0.55, 1.0, 0.10))
+				y += step
+			x += step
 
-	# 5. Left & Right Columns (Deck 40, Discard, Stone, Banish)
-	_draw_side_columns(w, h, gs)
+	# Horizon glow
+	var hy = h * 0.5
+	for i in range(10):
+		var a = 0.05 * (1.0 - float(i) / 10.0)
+		draw_rect(Rect2(0, hy - i * 9.0, w, i * 18.0), Color(1.0, 0.55, 0.85, a))
 
-	# 6. Central Arena Geometry & Logo
-	var play_left = 116.0
-	var play_right = w - 300.0
-	var center_x = play_left + (play_right - play_left) * 0.5
-	var center_y = h * 0.5 - 15.0
+	# Distant mountain silhouettes (procedural, deterministic)
+	_draw_mountain_range(w, hy + 10.0, 60.0, Color(0.22, 0.12, 0.34, 0.95), 1.3)
+	_draw_mountain_range(w, h * 0.80, 90.0, Color(0.14, 0.08, 0.24, 0.95), 2.1)
+	_draw_mountain_range(w, h * 0.98, 70.0, Color(0.08, 0.04, 0.14, 1.0), 3.7)
 
-	_draw_center_altar(center_x, center_y)
+	# Central summoning ring between the two battlefields
+	var c = Vector2(w * 0.52, hy)
+	var pulse = 0.5 + 0.5 * sin(_anim_time * 1.6)
+	for k in range(3):
+		var rx = 300.0 + k * 22.0
+		var pts = PackedVector2Array()
+		for s in range(65):
+			var ang = TAU * float(s) / 64.0
+			pts.append(c + Vector2(cos(ang) * rx, sin(ang) * rx * 0.16))
+		draw_polyline(pts, Color(1.0, 0.75, 0.35, 0.18 + 0.12 * pulse - k * 0.05), 2.0, true)
 
-	# 7. Battlefield Summoning Slots with 8-Point Crosshair Reticles
-	_draw_battlefield_slots(center_x, h)
+	# Vignette
+	for i in range(6):
+		var r_frac = float(i) / 6.0
+		var max_r = maxf(w, h) * 0.7
+		draw_arc(Vector2(w * 0.5, h * 0.5), max_r * (0.6 + r_frac * 0.5), 0, TAU, 48, Color(0.02, 0.0, 0.05, r_frac * 0.35), max_r * 0.14)
+
+func _draw_mountain_range(w: float, base_y: float, amp: float, col: Color, seed_f: float) -> void:
+	var pts = PackedVector2Array()
+	pts.append(Vector2(0, base_y + amp))
+	var steps = 40
+	for i in range(steps + 1):
+		var x = w * float(i) / steps
+		var n = sin(x * 0.011 * seed_f) * 0.5 + sin(x * 0.027 + seed_f * 2.0) * 0.35 + sin(x * 0.063 + seed_f) * 0.15
+		pts.append(Vector2(x, base_y - absf(n) * amp))
+	pts.append(Vector2(w, base_y + amp))
+	pts.append(Vector2(w, base_y + amp * 3.0))
+	pts.append(Vector2(0, base_y + amp * 3.0))
+	draw_colored_polygon(pts, col)
 
 # ==============================================================================
 # 1. Base Mat Surface & Vignette

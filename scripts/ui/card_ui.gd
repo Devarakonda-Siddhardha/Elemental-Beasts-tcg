@@ -16,6 +16,8 @@ var max_hp: int = 0
 var current_attack: int = 0
 var is_on_field: bool = false
 var beast_instance_ref = null
+var base_scale: Vector2 = Vector2.ONE
+var hover_zoom: bool = true
 
 # Node references
 @onready var frame_rect: TextureRect = $FrameRect
@@ -163,7 +165,10 @@ func update_ui() -> void:
 	# 7. Ability Details
 	if card_data.ability and not card_data.ability.is_empty():
 		ability_title_label.text = card_data.ability.get("name", "")
-		ability_desc_label.text = card_data.ability.get("description", "")
+		var ab_desc = card_data.ability.get("description", "")
+		if ab_desc == "" and card_data.description != "":
+			ab_desc = card_data.description
+		ability_desc_label.text = ab_desc
 	elif card_data.description != "":
 		ability_title_label.text = "EFFECT"
 		ability_desc_label.text = card_data.description
@@ -190,14 +195,19 @@ func update_ui() -> void:
 	if card_data.sub_type == "fusion_dragon":
 		footer_label.text = "FUSE: " + card_data.fusion_materials[0].replace("_", " ").to_upper() + " + " + card_data.fusion_materials[1].replace("_", " ").to_upper()
 		$FooterBadge.visible = true
+		_set_rect($FooterBadge, 55, 233, 145, 251)
 	elif card_data.evolution_stage == 1:
 		footer_label.text = "EVOLVES FROM LITTLE DRAGON"
 		$FooterBadge.visible = true
+		_set_rect($FooterBadge, 55, 233, 145, 251)
 	else:
 		$FooterBadge.visible = false
 		
-	# 10. Status Tag (Fidelity tier)
+	_apply_frame_layout()
+
+	# 10. Status Tag (Hidden during gameplay to keep top dragon crest clean)
 	if status_tag:
+		status_tag.visible = false
 		status_tag.text = card_data.status
 		match card_data.status:
 			"CONFIRMED":
@@ -206,6 +216,100 @@ func update_ui() -> void:
 				status_tag.modulate = Color(1.0, 0.8, 0.2) # Gold
 			_:
 				status_tag.modulate = Color(0.4, 0.8, 1.0) # Cyan
+
+func _set_rect(c: Control, l: float, t: float, r: float, b: float) -> void:
+	if c:
+		c.offset_left = l; c.offset_top = t; c.offset_right = r; c.offset_bottom = b
+
+## Aligns text to the plaques baked into each frame family so nothing overlaps.
+func _apply_frame_layout() -> void:
+	name_label.visible = true
+	type_label.visible = true
+	ability_title_label.visible = ability_title_label.text != ""
+	# Light text for dark frames, dark text for light parchment frames
+	ability_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var dark_ink = Color(0.14, 0.09, 0.05, 1.0)
+	var dark_shadow = Color(1.0, 0.95, 0.85, 0.45)
+	var light_ink = Color(0.96, 0.95, 0.92, 1.0)
+	var light_shadow = Color(0.0, 0.0, 0.0, 0.95)
+	var gold_title = Color(1.0, 0.88, 0.38, 1.0)
+	var dark_title = Color(0.32, 0.16, 0.04, 1.0)
+
+	# Default font sizing for name
+	if card_data.name.length() <= 13:
+		name_label.add_theme_font_size_override("font_size", 11)
+	elif card_data.name.length() <= 17:
+		name_label.add_theme_font_size_override("font_size", 9)
+	else:
+		name_label.add_theme_font_size_override("font_size", 8)
+
+	if card_data.card_type == "stone":
+		# Stone templates have full-art monoliths & baked top banner ("FIRE ELEMENT STONE")
+		name_label.visible = false
+		type_label.visible = false
+		ability_title_label.visible = false
+		element_icon.visible = false
+		cost_badge.visible = false
+		ability_desc_label.add_theme_color_override("font_color", dark_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
+		_set_rect($AbilityBox, 26, 188, 174, 238)
+	elif card_data.card_type == "spell":
+		# Spell templates have top banner ("SPELL") and light parchment bottom box
+		type_label.visible = false
+		element_icon.visible = true
+		_set_rect(name_label, 34, 41, 166, 56)
+		_set_rect(art_rect, 24, 56, 176, 144)
+		ability_title_label.visible = false
+		ability_desc_label.add_theme_color_override("font_color", dark_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
+		_set_rect($AbilityBox, 26, 160, 174, 232)
+	elif card_data.card_type == "support":
+		# Support templates have top banner ("Supporter"), middle ribbon, and parchment bottom box
+		type_label.visible = false
+		element_icon.visible = false
+		_set_rect(name_label, 38, 143, 162, 160)
+		_set_rect(art_rect, 24, 52, 176, 138)
+		ability_title_label.visible = false
+		ability_desc_label.add_theme_color_override("font_color", dark_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
+		_set_rect($AbilityBox, 26, 170, 174, 234)
+	elif card_data.sub_type == "base_dragon" or card_data.element == "neutral":
+		# Base Dragon (Little Dragon) has arch sky, middle parchment ribbon, bottom parchment box
+		_set_rect(name_label, 42, 34, 158, 50)
+		_set_rect(art_rect, 24, 50, 176, 137)
+		_set_rect(type_label, 42, 144, 158, 159)
+		type_label.add_theme_color_override("font_color", dark_title)
+		type_label.add_theme_color_override("font_shadow_color", dark_shadow)
+		ability_title_label.add_theme_color_override("font_color", dark_title)
+		ability_title_label.add_theme_color_override("font_shadow_color", dark_shadow)
+		ability_desc_label.add_theme_color_override("font_color", dark_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
+		_set_rect($AbilityBox, 26, 168, 174, 226)
+	elif card_data.sub_type == "fusion_dragon" or card_data.sub_type == "ascended_dragon":
+		# Half-and-half primary element fusion frames share the exact combat frame geometry
+		element_icon.visible = false
+		_set_rect(name_label, 52, 41, 148, 56)
+		_set_rect(art_rect, 24, 56, 176, 137)
+		_set_rect(type_label, 46, 140, 154, 155)
+		type_label.add_theme_color_override("font_color", gold_title)
+		type_label.add_theme_color_override("font_shadow_color", light_shadow)
+		ability_title_label.add_theme_color_override("font_color", gold_title)
+		ability_title_label.add_theme_color_override("font_shadow_color", light_shadow)
+		ability_desc_label.add_theme_color_override("font_color", light_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", light_shadow)
+		_set_rect($AbilityBox, 26, 159, 174, 224)
+	else:
+		# Elemental, Transcendent, and God Dragon dark combat frames
+		_set_rect(name_label, 52, 41, 148, 56)
+		_set_rect(art_rect, 24, 56, 176, 137)
+		_set_rect(type_label, 46, 140, 154, 155)
+		type_label.add_theme_color_override("font_color", gold_title)
+		type_label.add_theme_color_override("font_shadow_color", light_shadow)
+		ability_title_label.add_theme_color_override("font_color", gold_title)
+		ability_title_label.add_theme_color_override("font_shadow_color", light_shadow)
+		ability_desc_label.add_theme_color_override("font_color", light_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", light_shadow)
+		_set_rect($AbilityBox, 26, 159, 174, 224)
 
 func load_card_artwork() -> void:
 	if use_legacy_art and card_data.id == "wind_dragon":
@@ -354,16 +458,16 @@ func _on_mouse_entered() -> void:
 	card_hovered.emit(self, true)
 	if Engine.has_singleton("SoundManager") or has_node("/root/SoundManager"):
 		get_node("/root/SoundManager").play_card_hover()
-	if not is_on_field:
+	if not is_on_field and hover_zoom:
 		var tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(self, "scale", Vector2(1.08, 1.08), 0.12)
+		tween.tween_property(self, "scale", base_scale * 1.12, 0.12)
 		z_index = 10
 
 func _on_mouse_exited() -> void:
 	card_hovered.emit(self, false)
-	if not is_on_field:
+	if not is_on_field and hover_zoom:
 		var tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(self, "scale", Vector2(1.0, 1.0), 0.12)
+		tween.tween_property(self, "scale", base_scale, 0.12)
 		z_index = 0
 
 func _on_gui_input(event: InputEvent) -> void:
