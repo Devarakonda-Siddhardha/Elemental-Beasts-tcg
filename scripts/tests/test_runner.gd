@@ -762,16 +762,19 @@ func test_31_realms_unlimited_stones_and_mono_element_decks() -> void:
 	var opp_r = state.play_realm(1, 0)
 	assert_true(opp_r.success and state.active_realm.id == "inferno_caldera" and state.get_discard(0).has(db["thunder_mountain"]), "Requirement 31f: Playing a new Realm replaces the previous Realm and sends it to its owner's discard pile")
 
-	# 4. Verify all 6 Starter Decks are pure mono-element (only neutral cards + their primary element) and contain 12 matching stones
+	# 4. Verify all 6 Starter Decks are pure mono-element (only neutral cards + their primary element), contain 12 matching stones, and contain 3x little_dragon + 3x fierce_little_dragon
 	var f = FileAccess.open("res://data/default_decks.json", FileAccess.READ)
 	var j = JSON.new()
 	j.parse(f.get_as_text())
 	f.close()
 	var decks: Array = j.get_data().get("decks", [])
 	var all_mono_pure := true
+	var all_have_3_and_3_little_dragons := true
 	for d in decks:
 		var deck_el = str(d.get("element", ""))
 		var stone_cnt := 0
+		var ld_cnt := 0
+		var fld_cnt := 0
 		for cid in d.get("cards", []):
 			var c: CardData = db[cid]
 			if c.element != "neutral" and c.element != deck_el:
@@ -779,7 +782,29 @@ func test_31_realms_unlimited_stones_and_mono_element_decks() -> void:
 				printerr("Non-matching element card " + cid + " (" + c.element + ") in " + deck_el + " deck!")
 			if cid == deck_el + "_stone":
 				stone_cnt += 1
+			elif cid == "little_dragon":
+				ld_cnt += 1
+			elif cid == "fierce_little_dragon":
+				fld_cnt += 1
 		if stone_cnt < 5:
 			all_mono_pure = false
+		if ld_cnt != 3 or fld_cnt != 3:
+			all_have_3_and_3_little_dragons = false
 	assert_true(all_mono_pure, "Requirement 31g: All 6 Starter Decks are pure mono-element decks with unrestricted Element Stone counts (12 stones each)")
+
+	# 5. Verify Fierce Little Dragon has higher Attack, lower HP, dedicated artwork, evolves into Elemental Dragons, and is included 3x alongside 3x Little Dragon
+	var ld_card: CardData = db.get("little_dragon")
+	var fld_card: CardData = db.get("fierce_little_dragon")
+	var fld_inst = BeastInstance.create(fld_card, 0, 1)
+	state.get_stones(0).stone_pile["lightning"] = 2
+	var fld_can_evolve = EvolutionEngine.can_evolve(fld_inst, db["lightning_dragon"], state.get_stones(0))
+	assert_true(
+		fld_card != null and
+		fld_card.attack > ld_card.attack and
+		fld_card.hp < ld_card.hp and
+		FileAccess.file_exists("res://assets/art/fierce_little_dragon.jpg") and
+		fld_can_evolve.valid and
+		all_have_3_and_3_little_dragons,
+		"Requirement 31h: Fierce Little Dragon has higher Attack (5 vs 3), lower HP (5 vs 8), dedicated artwork, evolves into Elemental Dragons, and is included 3x alongside 3x Little Dragon in all 6 Starter Decks"
+	)
 

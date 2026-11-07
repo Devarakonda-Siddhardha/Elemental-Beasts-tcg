@@ -20,7 +20,12 @@ static func can_evolve(beast: BeastInstance, evo_card: CardData, stone_mgr: Ston
 	if evo_card.card_type != "beast" or evo_card.evolution_stage != 1:
 		return {"valid": false, "error": "Card is not an elemental evolution"}
 		
-	if evo_card.evolves_from != "" and beast.card_data.id != evo_card.evolves_from:
+	var is_valid_pre_evo: bool = (
+		evo_card.evolves_from == "" or
+		beast.card_data.id == evo_card.evolves_from or
+		(evo_card.evolves_from == "little_dragon" and beast.card_data.sub_type == "base_dragon")
+	)
+	if not is_valid_pre_evo:
 		return {
 			"valid": false, 
 			"error": "Target beast " + beast.card_data.name + " cannot evolve into " + evo_card.name + " (requires " + evo_card.evolves_from + ")"
