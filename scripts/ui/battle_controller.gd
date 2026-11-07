@@ -48,11 +48,15 @@ var preview_card: CardUI = null
 @onready var turn_label: Label = $TurnPanel/TurnLabel
 @onready var active_player_label: Label = $TurnPanel/ActivePlayerLabel
 @onready var end_turn_button: Button = $TurnPanel/EndTurnButton
+@onready var log_panel: Panel = $LogPanel
 @onready var log_label: RichTextLabel = $LogPanel/LogText
 @onready var prompt_banner: Label = $PromptBanner
 
 @onready var legacy_toggle_button: Button = $LegacyToggle
 @onready var menu_button: Button = $MenuButton
+
+var _prev_hand_size: int = 0
+var _animate_hand_fan: bool = true
 
 func _ready() -> void:
 	game_state = GameState.new()
@@ -65,6 +69,9 @@ func _ready() -> void:
 	game_state.beast_summoned.connect(_on_beast_summoned)
 	game_state.beast_evolved.connect(_on_beast_evolved)
 	game_state.beasts_fused.connect(_on_beasts_fused)
+	game_state.beast_transcended.connect(_on_beast_transcended)
+	game_state.beast_ascended.connect(_on_beast_ascended)
+	game_state.god_dragon_summoned.connect(_on_god_dragon_summoned)
 	game_state.combat_resolved.connect(_on_combat_resolved)
 	game_state.deck_shuffled.connect(_on_deck_shuffled)
 	game_state.game_ended.connect(_on_game_ended)
@@ -89,6 +96,7 @@ func _ready() -> void:
 	
 	log_message("[color=#ffd166]◆ Duel Initialized — 30 ♥ | 5 💧[/color]")
 	game_state.start_game(player_deck, ai_deck, 0)
+	_animate_hand_fan = true
 	refresh_full_ui()
 	if not skip_coin_flip_overlay:
 		_show_start_of_match_coin_flip(player_deck, ai_deck)
@@ -163,42 +171,167 @@ func _build_static_ui() -> void:
 							open_deck_search_modal("✦ YOUR DISCARD PILE ✦", game_state.get_discard(0), Callable(), false)
 				)
 
+	# Build Top-Right Utility Buttons: Audio Settings (🔊) & Battle Log Toggle (📜)
+	_setup_utility_and_log_controls()
+
+func _setup_utility_and_log_controls() -> void:
+	var btn_sb := StyleBoxFlat.new()
+	btn_sb.bg_color = Color(0.09, 0.04, 0.16, 0.92)
+	btn_sb.border_color = Color(0.88, 0.68, 0.28, 1.0)
+	btn_sb.set_border_width_all(2)
+	btn_sb.set_corner_radius_all(10)
+
+	if not has_node("AudioSettingsBtn"):
+		var audio_btn := Button.new()
+		audio_btn.name = "AudioSettingsBtn"
+		audio_btn.text = "🔊"
+		audio_btn.tooltip_text = "Audio & Commentator Voice Settings"
+		audio_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		audio_btn.offset_left = -96.0
+		audio_btn.offset_top = 52.0
+		audio_btn.offset_right = -54.0
+		audio_btn.offset_bottom = 92.0
+		audio_btn.add_theme_font_size_override("font_size", 16)
+		audio_btn.add_theme_stylebox_override("normal", btn_sb)
+		audio_btn.add_theme_stylebox_override("hover", btn_sb)
+		audio_btn.add_theme_stylebox_override("pressed", btn_sb)
+		audio_btn.pressed.connect(func():
+			if has_node("/root/SoundManager"):
+				var sm = get_node("/root/SoundManager")
+				sm.play_ui_click()
+				if sm.has_method("show_audio_settings_modal"):
+					sm.show_audio_settings_modal(self)
+		)
+		add_child(audio_btn)
+
+	if not has_node("LogToggleBtn"):
+		var log_btn := Button.new()
+		log_btn.name = "LogToggleBtn"
+		log_btn.text = "📜"
+		log_btn.tooltip_text = "Toggle Battle Log On / Off"
+		log_btn.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		log_btn.offset_left = -48.0
+		log_btn.offset_top = 52.0
+		log_btn.offset_right = -8.0
+		log_btn.offset_bottom = 92.0
+		log_btn.add_theme_font_size_override("font_size", 16)
+		log_btn.add_theme_stylebox_override("normal", btn_sb)
+		log_btn.add_theme_stylebox_override("hover", btn_sb)
+		log_btn.add_theme_stylebox_override("pressed", btn_sb)
+		log_btn.pressed.connect(_toggle_battle_log)
+		add_child(log_btn)
+
+	if log_panel and not log_panel.has_node("CloseLogBtn"):
+		var close_log := Button.new()
+		close_log.name = "CloseLogBtn"
+		close_log.text = "—"
+		close_log.tooltip_text = "Hide Battle Log"
+		close_log.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+		close_log.offset_left = -28.0
+		close_log.offset_top = 3.0
+		close_log.offset_right = -4.0
+		close_log.offset_bottom = 23.0
+		close_log.add_theme_font_size_override("font_size", 11)
+		close_log.pressed.connect(_toggle_battle_log)
+		log_panel.add_child(close_log)
+
+func _toggle_battle_log() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	if log_panel:
+		log_panel.visible = not log_panel.visible
+
 func _update_mana_pips(container: HBoxContainer, current: int) -> void:
-	if container.get_child_count() != RulesConfig.MAX_NORMAL_MANA:
+	# Render a single glowing sapphire Mana Symbol Crest with the current Mana number inside it (e.g., "5")
+	if container.get_child_count() != 1 or not container.get_child(0).has_meta("is_mana_symbol_orb"):
 		for c in container.get_children():
 			c.queue_free()
-		for i in range(RulesConfig.MAX_NORMAL_MANA):
-			var p = Panel.new()
-			p.custom_minimum_size = Vector2(22, 22)
-			p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			container.add_child(p)
-	for i in range(container.get_child_count()):
-		var p: Panel = container.get_child(i)
-		var sb = StyleBoxFlat.new()
-		sb.set_corner_radius_all(11)
-		sb.set_border_width_all(2)
-		if i < current:
-			sb.bg_color = Color(0.2, 0.65, 1.0)
-			sb.border_color = Color(0.75, 0.95, 1.0)
-			sb.shadow_color = Color(0.3, 0.7, 1.0, 0.6)
-			sb.shadow_size = 4
-		else:
-			sb.bg_color = Color(0.18, 0.18, 0.22)
-			sb.border_color = Color(0.45, 0.45, 0.5)
-		p.add_theme_stylebox_override("panel", sb)
+		var orb_holder := Control.new()
+		orb_holder.set_meta("is_mana_symbol_orb", true)
+		orb_holder.custom_minimum_size = Vector2(140, 48)
+		orb_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		container.add_child(orb_holder)
+
+		var orb := Panel.new()
+		orb.name = "ManaOrb"
+		orb.position = Vector2(0, 0)
+		orb.size = Vector2(46, 46)
+		orb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		orb_holder.add_child(orb)
+
+		var inner_ring := Panel.new()
+		inner_ring.name = "InnerRing"
+		inner_ring.position = Vector2(4, 4)
+		inner_ring.size = Vector2(38, 38)
+		inner_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		orb.add_child(inner_ring)
+
+		var num_lbl := Label.new()
+		num_lbl.name = "ManaNum"
+		num_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		num_lbl.add_theme_font_size_override("font_size", 22)
+		num_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+		num_lbl.add_theme_color_override("font_shadow_color", Color(0.0, 0.12, 0.35, 0.95))
+		num_lbl.add_theme_constant_override("shadow_offset_x", 1)
+		num_lbl.add_theme_constant_override("shadow_offset_y", 2)
+		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		orb.add_child(num_lbl)
+
+		var cap_lbl := Label.new()
+		cap_lbl.name = "ManaTag"
+		cap_lbl.position = Vector2(54, 12)
+		cap_lbl.size = Vector2(90, 24)
+		cap_lbl.text = "MANA"
+		cap_lbl.add_theme_font_size_override("font_size", 13)
+		cap_lbl.add_theme_color_override("font_color", Color(0.62, 0.88, 1.0))
+		cap_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		orb_holder.add_child(cap_lbl)
+
+	var holder: Control = container.get_child(0)
+	var orb_panel: Panel = holder.get_node("ManaOrb")
+	var ring_panel: Panel = orb_panel.get_node("InnerRing")
+	var num_label: Label = orb_panel.get_node("ManaNum")
+
+	var outer_sb := StyleBoxFlat.new()
+	outer_sb.set_corner_radius_all(23)
+	outer_sb.set_border_width_all(3)
+	var inner_sb := StyleBoxFlat.new()
+	inner_sb.set_corner_radius_all(19)
+	inner_sb.set_border_width_all(1)
+
+	if current > 0:
+		outer_sb.bg_color = Color(0.06, 0.34, 0.78, 0.98)
+		outer_sb.border_color = Color(0.95, 0.82, 0.35, 1.0)
+		outer_sb.shadow_color = Color(0.20, 0.72, 1.0, 0.75)
+		outer_sb.shadow_size = 8
+		inner_sb.bg_color = Color(0.16, 0.62, 0.98, 0.95)
+		inner_sb.border_color = Color(0.78, 0.96, 1.0, 0.9)
+	else:
+		outer_sb.bg_color = Color(0.14, 0.16, 0.24, 0.95)
+		outer_sb.border_color = Color(0.45, 0.48, 0.56, 0.85)
+		inner_sb.bg_color = Color(0.20, 0.22, 0.30, 0.9)
+		inner_sb.border_color = Color(0.38, 0.40, 0.48, 0.7)
+
+	orb_panel.add_theme_stylebox_override("panel", outer_sb)
+	ring_panel.add_theme_stylebox_override("panel", inner_sb)
+	num_label.text = str(current)
 
 func update_hud() -> void:
 	var p_hp = game_state.player_hp[0]
 	player_hp_label.text = str(p_hp)
 	var p_mana = game_state.get_mana(0).current_mana
-	player_mana_label.text = "MANA  " + str(p_mana) + "/" + str(RulesConfig.MAX_NORMAL_MANA)
+	player_mana_label.visible = false
+	player_mana_pips.position = Vector2(150, 26)
 	_update_mana_pips(player_mana_pips, p_mana)
 	refresh_stones_display(0, player_stones_container)
 
 	var op_hp = game_state.player_hp[1]
 	opponent_hp_label.text = str(op_hp)
 	var op_mana = game_state.get_mana(1).current_mana
-	opponent_mana_label.text = "MANA  " + str(op_mana) + "/" + str(RulesConfig.MAX_NORMAL_MANA)
+	opponent_mana_label.visible = false
+	opponent_mana_pips.position = Vector2(150, 26)
 	_update_mana_pips(opponent_mana_pips, op_mana)
 	refresh_stones_display(1, opponent_stones_container)
 
@@ -341,13 +474,18 @@ func refresh_player_hand() -> void:
 	var avail = player_hand_container.get_parent().size.x
 	if avail <= 0:
 		avail = 700.0
-	var sep = -18
+	var sep = -14
 	if hand.size() > 1:
-		sep = mini(-18, int((avail - cw * hand.size()) / float(hand.size() - 1)))
+		sep = mini(-14, int((avail - cw * hand.size()) / float(hand.size() - 1)))
 	player_hand_container.add_theme_constant_override("separation", sep)
+
+	var should_fan_in: bool = _animate_hand_fan or (hand.size() > _prev_hand_size)
+	_prev_hand_size = hand.size()
+	_animate_hand_fan = false
 
 	var mid = (hand.size() - 1) * 0.5
 	var first_card_ui: CardUI = null
+	var base_pos := -Vector2(100, 139) * (1.0 - HAND_CARD_SCALE)
 	for i in range(hand.size()):
 		var card: CardData = hand[i]
 		var card_ui: CardUI = card_ui_prefab.instantiate()
@@ -356,8 +494,28 @@ func refresh_player_hand() -> void:
 		if card_ui.has_method("set_compact"):
 			card_ui.set_compact(true)
 		var offset_from_mid = float(i) - mid
-		card_ui.rotation_degrees = offset_from_mid * 2.2
-		card_ui.position.y += abs(offset_from_mid) * 3.5
+		var target_rot: float = offset_from_mid * 3.8
+		var target_y_arc: float = (offset_from_mid * offset_from_mid) * 2.2
+		var target_pos := base_pos + Vector2(0.0, target_y_arc)
+
+		if should_fan_in and is_inside_tree():
+			card_ui.rotation_degrees = 0.0
+			card_ui.position = base_pos + Vector2(-offset_from_mid * 28.0, 46.0)
+			card_ui.scale = card_ui.base_scale * 0.72
+			var f_tw := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			f_tw.tween_interval(float(i) * 0.032)
+			f_tw.tween_property(card_ui, "position", target_pos, 0.24)
+			f_tw.parallel().tween_property(card_ui, "rotation_degrees", target_rot, 0.24)
+			f_tw.parallel().tween_property(card_ui, "scale", card_ui.base_scale, 0.24)
+		else:
+			card_ui.rotation_degrees = target_rot
+			card_ui.position = target_pos
+
+		var idx_capture := i
+		card_ui.card_hovered.connect(func(_c: CardUI, hovered: bool):
+			_on_hand_card_fan_hover(idx_capture, hovered)
+		)
+
 		if first_card_ui == null:
 			first_card_ui = card_ui
 
@@ -367,7 +525,7 @@ func refresh_player_hand() -> void:
 				playable = true
 			elif card.card_type == "realm" and mana_mgr.can_spend(card.mana_cost):
 				playable = true
-			elif card.id == "little_dragon" and mana_mgr.can_spend(2) and field.size() < 4:
+			elif (card.id == "little_dragon" or card.sub_type == "base_dragon") and mana_mgr.can_spend(card.mana_cost if card.mana_cost > 0 else 2) and field.size() < 4:
 				playable = true
 			elif card.evolution_stage == 1:
 				for b in field:
@@ -401,6 +559,36 @@ func refresh_player_hand() -> void:
 
 	if preview_card == null and first_card_ui != null:
 		_on_any_card_hovered(first_card_ui, true)
+
+func _on_hand_card_fan_hover(hovered_idx: int, is_hovered: bool) -> void:
+	var count := player_hand_container.get_child_count()
+	if count == 0:
+		return
+	var mid := (count - 1) * 0.5
+	var base_pos := -Vector2(100, 139) * (1.0 - HAND_CARD_SCALE)
+	for i in range(count):
+		var holder: Control = player_hand_container.get_child(i)
+		if holder.get_child_count() == 0:
+			continue
+		var cui: CardUI = holder.get_child(0)
+		var offset_from_mid := float(i) - mid
+		var rest_rot: float = offset_from_mid * 3.8
+		var rest_y: float = (offset_from_mid * offset_from_mid) * 2.2
+		var target_pos := base_pos + Vector2(0.0, rest_y)
+		var target_rot := rest_rot
+		if is_hovered:
+			if i == hovered_idx:
+				target_pos = base_pos + Vector2(0.0, -24.0)
+				target_rot = 0.0
+			else:
+				var push_dir := -1.0 if i < hovered_idx else 1.0
+				var dist := float(abs(i - hovered_idx))
+				var push_px := push_dir * (18.0 / maxf(1.0, dist * 0.65))
+				target_pos = base_pos + Vector2(push_px, rest_y + 4.0)
+				target_rot = rest_rot + push_dir * 2.5
+		var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(cui, "position", target_pos, 0.14)
+		tw.parallel().tween_property(cui, "rotation_degrees", target_rot, 0.14)
 
 func refresh_fields() -> void:
 	for child in player_field_container.get_children():
@@ -468,8 +656,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 			log_message("[color=#e76f51]  ⚠️ " + r_res.error + "[/color]")
 		return
 		
-	# If Little Dragon -> summon directly
-	if card.id == "little_dragon":
+	# If Little Dragon or Fierce Little Dragon -> summon directly
+	if card.id == "little_dragon" or card.sub_type == "base_dragon":
 		var beast = game_state.summon_little_dragon(0, hand_index)
 		if beast:
 			if has_node("/root/SoundManager"):
@@ -811,13 +999,115 @@ func _on_card_drawn(player_id: int, card: CardData) -> void:
 		log_message("  ❖ Drew [b]" + card.name + "[/b]")
 
 func _on_beast_summoned(player_id: int, beast: BeastInstance) -> void:
-	pass
+	call_deferred("play_card_summon_vfx", player_id, beast, false)
 
 func _on_beast_evolved(player_id: int, beast: BeastInstance) -> void:
-	pass
+	call_deferred("play_card_summon_vfx", player_id, beast, true)
 
 func _on_beasts_fused(player_id: int, beast: BeastInstance) -> void:
-	pass
+	call_deferred("play_card_summon_vfx", player_id, beast, true)
+
+func _on_beast_transcended(player_id: int, beast: BeastInstance) -> void:
+	call_deferred("play_card_summon_vfx", player_id, beast, true)
+
+func _on_beast_ascended(player_id: int, beast: BeastInstance) -> void:
+	call_deferred("play_card_summon_vfx", player_id, beast, true)
+
+func _on_god_dragon_summoned(player_id: int, beast: BeastInstance) -> void:
+	call_deferred("play_card_summon_vfx", player_id, beast, true)
+
+func play_card_summon_vfx(player_id: int, beast: BeastInstance, is_major_transformation: bool = false) -> void:
+	if not is_inside_tree() or beast == null or beast.card_data == null:
+		return
+	var field_arr: Array = game_state.get_field(player_id)
+	var slot_idx: int = field_arr.find(beast)
+	if slot_idx == -1:
+		slot_idx = maxi(0, field_arr.size() - 1)
+	var field_container: HBoxContainer = player_field_container if player_id == 0 else opponent_field_container
+	var target_center := Vector2(640, 420 if player_id == 0 else 210)
+	var target_card_ui: CardUI = null
+	if slot_idx >= 0 and slot_idx < field_container.get_child_count():
+		var slot_holder: Control = field_container.get_child(slot_idx)
+		target_center = slot_holder.get_global_rect().get_center()
+		if slot_holder.get_child_count() > 0 and slot_holder.get_child(0) is CardUI:
+			target_card_ui = slot_holder.get_child(0)
+
+	var el_key := beast.card_data.element.to_lower()
+	var vfx_color: Color = ELEMENT_UI_COLORS.get(el_key, Color(1.0, 0.85, 0.35))
+	if beast.card_data.id == "god_dragon":
+		vfx_color = Color(1.0, 0.92, 0.40)
+
+	# Animate the summoned CardUI dropping in with an energetic scale pop and flash
+	if target_card_ui != null:
+		var rest_pos := target_card_ui.position
+		var rest_scale := target_card_ui.base_scale
+		target_card_ui.scale = rest_scale * (1.42 if is_major_transformation else 1.28)
+		target_card_ui.position = rest_pos + Vector2(0, -28)
+		target_card_ui.modulate = Color(1.8, 1.7, 1.5, 1.0)
+		var c_tw := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		c_tw.tween_property(target_card_ui, "scale", rest_scale, 0.30)
+		c_tw.parallel().tween_property(target_card_ui, "position", rest_pos, 0.26)
+		c_tw.parallel().tween_property(target_card_ui, "modulate", Color.WHITE, 0.32)
+
+	var vfx_layer := Control.new()
+	vfx_layer.name = "SummonVFXLayer"
+	vfx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vfx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vfx_layer.z_index = 42
+	add_child(vfx_layer)
+
+	# Expanding Elemental Shockwave Ring 1 & 2
+	for r_i in range(2 if is_major_transformation else 1):
+		var ring := Panel.new()
+		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var init_sz := Vector2(44, 44)
+		ring.size = init_sz
+		ring.pivot_offset = init_sz * 0.5
+		ring.position = target_center - ring.pivot_offset
+		var r_sb := StyleBoxFlat.new()
+		r_sb.bg_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.28)
+		r_sb.border_color = vfx_color.lightened(0.35)
+		r_sb.set_border_width_all(4)
+		r_sb.set_corner_radius_all(120)
+		r_sb.shadow_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.85)
+		r_sb.shadow_size = 14
+		ring.add_theme_stylebox_override("panel", r_sb)
+		vfx_layer.add_child(ring)
+
+		var final_sz := Vector2(230, 230) if is_major_transformation else Vector2(180, 180)
+		var r_tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		r_tw.tween_interval(float(r_i) * 0.08)
+		r_tw.tween_property(ring, "size", final_sz, 0.36)
+		r_tw.parallel().tween_property(ring, "position", target_center - final_sz * 0.5, 0.36)
+		r_tw.parallel().tween_property(ring, "modulate:a", 0.0, 0.36)
+
+	# Radial Elemental Sparks
+	var spark_count := 16 if is_major_transformation else 10
+	for s_i in range(spark_count):
+		var spark := Panel.new()
+		spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		spark.size = Vector2(10, 10)
+		spark.pivot_offset = Vector2(5, 5)
+		spark.position = target_center - Vector2(5, 5)
+		var s_sb := StyleBoxFlat.new()
+		s_sb.bg_color = vfx_color.lightened(0.4)
+		s_sb.set_corner_radius_all(5)
+		s_sb.shadow_color = vfx_color
+		s_sb.shadow_size = 6
+		spark.add_theme_stylebox_override("panel", s_sb)
+		vfx_layer.add_child(spark)
+
+		var angle := (float(s_i) / float(spark_count)) * TAU
+		var radius := (125.0 if is_major_transformation else 92.0) + float((s_i % 3) * 14)
+		var offset := Vector2(cos(angle), sin(angle)) * radius
+		var s_tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		s_tw.tween_property(spark, "position", target_center - Vector2(5, 5) + offset, 0.38)
+		s_tw.parallel().tween_property(spark, "scale", Vector2(0.2, 0.2), 0.38)
+		s_tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.38)
+
+	var clean_tw := create_tween()
+	clean_tw.tween_interval(0.50)
+	clean_tw.tween_callback(vfx_layer.queue_free)
 
 func _on_combat_resolved(res: Dictionary) -> void:
 	pass

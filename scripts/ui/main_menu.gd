@@ -15,8 +15,13 @@ var _bob_time: float = 0.0
 var _floating_base_y: float = 500.0
 var _toast_panel: PanelContainer = null
 static var _welcome_played: bool = false
+var _portal_frames: Array[Texture2D] = []
+var _portal_frame_timer: float = 0.0
+var _portal_frame_idx: int = 0
+@onready var background_rect: TextureRect = $Background
 
 func _ready() -> void:
+	_load_animated_portal_frames()
 	if not _welcome_played and has_node("/root/SoundManager"):
 		_welcome_played = true
 		var sm = get_node("/root/SoundManager")
@@ -55,11 +60,27 @@ func _ready() -> void:
 			btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 			btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 
+func _load_animated_portal_frames() -> void:
+	_portal_frames.clear()
+	for i in range(12):
+		var p := "res://assets/art/portal_frames/frame_%02d.jpg" % i
+		if ResourceLoader.exists(p):
+			var tex = load(p)
+			if tex is Texture2D:
+				_portal_frames.append(tex)
+	if not _portal_frames.is_empty() and background_rect:
+		background_rect.texture = _portal_frames[0]
 
 func _process(delta: float) -> void:
 	if floating_pack_widget:
 		_bob_time += delta * 2.6
 		floating_pack_widget.position.y = _floating_base_y + sin(_bob_time) * 6.0
+	if _portal_frames.size() > 1 and background_rect:
+		_portal_frame_timer += delta
+		if _portal_frame_timer >= 0.09:
+			_portal_frame_timer = 0.0
+			_portal_frame_idx = (_portal_frame_idx + 1) % _portal_frames.size()
+			background_rect.texture = _portal_frames[_portal_frame_idx]
 
 func _on_button_hover(btn: Button, is_hovered: bool) -> void:
 	if not is_instance_valid(btn):
@@ -262,8 +283,11 @@ func _on_collection_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/card_collection.tscn")
 
 func _on_test_suite_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-	_show_verification_toast("✔ Master Verification Suite: All 103 Core TCG Assertions Verified (100% Pass)! Check console or run headless TestRunner.")
+	if has_node("/root/SoundManager"):
+		var sm = get_node("/root/SoundManager")
+		sm.play_ui_click()
+		if sm.has_method("show_audio_settings_modal"):
+			sm.show_audio_settings_modal(self)
 
 func _show_verification_toast(msg: String) -> void:
 	if is_instance_valid(_toast_panel):

@@ -72,6 +72,7 @@ func run_all_tests() -> void:
 	test_29_deck_search_shuffle_and_coin_flip()
 	test_30_elevenlabs_sfx_and_voice_lines()
 	test_31_realms_unlimited_stones_and_mono_element_decks()
+	test_32_settings_log_toggle_vfx_and_collection_ui()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -807,4 +808,80 @@ func test_31_realms_unlimited_stones_and_mono_element_decks() -> void:
 		all_have_3_and_3_little_dragons,
 		"Requirement 31h: Fierce Little Dragon has higher Attack (5 vs 3), lower HP (5 vs 8), dedicated artwork, evolves into Elemental Dragons, and is included 3x alongside 3x Little Dragon in all 6 Starter Decks"
 	)
+
+func test_32_settings_log_toggle_vfx_and_collection_ui() -> void:
+	# 1. Verify SoundManager SFX and Commentator mute/volume controls & settings modal
+	var sm := SoundManagerClass.new()
+	sm._ready()
+	sm.set_sfx_muted(true)
+	sm.set_vo_muted(true)
+	assert_true(sm.sfx_muted and sm.vo_muted and sm.has_method("show_audio_settings_modal"), "Requirement 32a: SoundManager provides independent SFX & Commentator mute/volume controls and Audio Settings modal")
+	sm.set_sfx_muted(false)
+	sm.set_vo_muted(false)
+	sm.set_sfx_volume_percent(100.0)
+	sm.set_vo_volume_percent(100.0)
+	sm.free()
+
+	# 2. Verify MainMenu replaces Verification Test button with Audio & Voice Settings and loads animated portal background frames
+	var mm_scene: PackedScene = load("res://scenes/main_menu.tscn")
+	var mm: Control = mm_scene.instantiate()
+	var btn_text: String = mm.get_node("VBoxContainer/TestSuiteButton").text
+	mm._load_animated_portal_frames()
+	assert_true(btn_text.contains("Settings") and not btn_text.contains("Verification") and mm._portal_frames.size() == 12, "Requirement 32b: Main Menu replaces Verification Test button with Audio & Voice Settings and plays 12 animated Elemental Dragon Portal background frames")
+	mm.free()
+
+	# 3. Verify BattleController has single Mana Symbol with '5', togglable Battle Log, Card Summoning VFX, and Hand Fanning VFX
+	var b_scene: PackedScene = load("res://scenes/battle.tscn")
+	var bc: Control = b_scene.instantiate()
+	bc.game_state = GameState.new()
+	bc.game_state.start_game()
+	bc.piles_grid = bc.get_node("PilesPanel/Grid")
+	bc.log_panel = bc.get_node("LogPanel")
+	bc.player_hp_label = bc.get_node("PlayerBar/LifeCrest/HPLabel")
+	bc.player_mana_label = bc.get_node("PlayerBar/ManaLabel")
+	bc.player_mana_pips = bc.get_node("PlayerBar/ManaPips")
+	bc.player_stones_container = bc.get_node("PlayerStonePanel/StonesContainer")
+	bc.opponent_hp_label = bc.get_node("OpponentBar/LifeCrest/HPLabel")
+	bc.opponent_mana_label = bc.get_node("OpponentBar/ManaLabel")
+	bc.opponent_mana_pips = bc.get_node("OpponentBar/ManaPips")
+	bc.opponent_stones_container = bc.get_node("OpponentStonePanel/StonesContainer")
+	bc.turn_label = bc.get_node("TurnPanel/TurnLabel")
+	bc.active_player_label = bc.get_node("TurnPanel/ActivePlayerLabel")
+	bc.end_turn_button = bc.get_node("TurnPanel/EndTurnButton")
+	bc._setup_utility_and_log_controls()
+	bc.update_hud()
+	var mana_holder: Control = bc.player_mana_pips.get_child(0)
+	var mana_num_lbl: Label = mana_holder.get_node("ManaOrb/ManaNum")
+	assert_true(not bc.player_mana_label.visible and mana_num_lbl != null and mana_num_lbl.text == "5", "Requirement 32c: Player & Opponent bars display a single glowing Mana Symbol Orb with '5' inside it")
+
+	var was_log_visible: bool = bc.log_panel.visible
+	bc._toggle_battle_log()
+	var after_toggle: bool = bc.log_panel.visible
+	bc._toggle_battle_log()
+	assert_true(was_log_visible and not after_toggle and bc.log_panel.visible and bc.has_node("LogToggleBtn") and bc.has_node("AudioSettingsBtn"), "Requirement 32d: Battle Log is togglable via top-right LogToggleBtn and panel header button")
+
+	assert_true(bc.has_method("play_card_summon_vfx") and bc.has_method("_on_hand_card_fan_hover"), "Requirement 32e: BattleController provides Card Summoning VFX and interactive Hand Fanning VFX")
+	bc.free()
+
+	# 4. Verify CardCollection matches reference layout with LeftSidebar, FilterToolbar, 6 Element icon filters, and Search bar
+	var cc_scene: PackedScene = load("res://scenes/card_collection.tscn")
+	var cc: Control = cc_scene.instantiate()
+	cc.card_db = CardData.load_database()
+	cc.grid_container = cc.get_node("ScrollContainer/GridContainer")
+	cc.scroll_container = cc.get_node("ScrollContainer")
+	cc.open_packs_button = cc.get_node("TopBar/OpenPacksButton")
+	cc.filter_option = cc.get_node("TopBar/FilterOption")
+	cc.legacy_toggle = cc.get_node("TopBar/LegacyToggle")
+	cc.back_button = cc.get_node("TopBar/BackButton")
+	cc.preview_panel = cc.get_node("PreviewPanel")
+	cc.preview_card_container = cc.get_node("PreviewPanel/CardHolder")
+	cc.preview_name = cc.get_node("PreviewPanel/InfoBox/Name")
+	cc.preview_type = cc.get_node("PreviewPanel/InfoBox/Type")
+	cc.preview_stats = cc.get_node("PreviewPanel/InfoBox/Stats")
+	cc.preview_ability = cc.get_node("PreviewPanel/InfoBox/AbilityText")
+	cc.preview_fidelity = cc.get_node("PreviewPanel/InfoBox/Fidelity")
+	cc._build_reference_archive_layout()
+	assert_true(cc.has_node("LeftSidebar") and cc.has_node("FilterToolbar") and cc.element_filter_btns.size() == 7 and cc.search_input != null, "Requirement 32f: Card Collection matches reference layout with Left Sidebar, Search bar, 6 Element icon filters, Type/Rarity dropdowns, and Ornate Preview Panel")
+	cc.free()
+
 

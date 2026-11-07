@@ -83,14 +83,14 @@ func execute_turn() -> Array[String]:
 		if game_state.evolve_beast(ai_player_id, beast_idx, evo_card_idx):
 			action_log.append("AI evolved Little Dragon into " + card.name + "!")
 			
-	# 4. Summon Little Dragon(s) (2 Mana each)
+	# 4. Summon Little Dragon / Fierce Little Dragon (2 Mana each)
 	while game_state.get_mana(ai_player_id).can_spend(RulesConfig.LITTLE_DRAGON_MANA_COST):
-		var ld_idx = find_card_in_hand("little_dragon")
+		var ld_idx = find_base_dragon_in_hand()
 		if ld_idx == -1 or game_state.get_field(ai_player_id).size() >= RulesConfig.MAX_FIELD_BEASTS:
 			break
 		var summoned = game_state.summon_little_dragon(ai_player_id, ld_idx)
 		if summoned:
-			action_log.append("AI summoned Little Dragon (spent 2 Mana).")
+			action_log.append("AI summoned " + summoned.card_data.name + " (spent 2 Mana).")
 		else:
 			break
 			
@@ -210,6 +210,13 @@ func find_card_in_hand(card_id: String) -> int:
 	var hand = game_state.get_hand(ai_player_id)
 	for i in range(hand.size()):
 		if hand[i].id == card_id:
+			return i
+	return -1
+
+func find_base_dragon_in_hand() -> int:
+	var hand = game_state.get_hand(ai_player_id)
+	for i in range(hand.size()):
+		if hand[i].id == "little_dragon" or hand[i].sub_type == "base_dragon":
 			return i
 	return -1
 

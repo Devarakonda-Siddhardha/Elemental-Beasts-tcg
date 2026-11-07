@@ -410,12 +410,12 @@ theme_override_colors/font_pressed_color = Color(0.82, 0.76, 0.96, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_indigo_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_indigo_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_indigo_pressed")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
-text = "✔️  Run Master Verification Tests"
+text = "⚙️  Audio & Voice Settings"
 
 [node name="QuitButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(0, 38)

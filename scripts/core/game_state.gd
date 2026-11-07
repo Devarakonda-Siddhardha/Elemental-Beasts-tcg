@@ -249,7 +249,7 @@ func summon_little_dragon(player_id: int, hand_index: int) -> BeastInstance:
 	if hand_index < 0 or hand_index >= hand.size():
 		return null
 	var card: CardData = hand[hand_index]
-	if card.id != "little_dragon":
+	if card.id != "little_dragon" and card.sub_type != "base_dragon":
 		return null
 		
 	var field = player_fields[player_id]
@@ -257,11 +257,11 @@ func summon_little_dragon(player_id: int, hand_index: int) -> BeastInstance:
 		return null
 		
 	var mana_mgr = player_mana[player_id]
-	# Rule: Little Dragon costs exactly 2 Mana to play.
-	if not mana_mgr.can_spend(RulesConfig.LITTLE_DRAGON_MANA_COST):
+	var cost: int = card.mana_cost if card.mana_cost > 0 else RulesConfig.LITTLE_DRAGON_MANA_COST
+	if not mana_mgr.can_spend(cost):
 		return null
 		
-	mana_mgr.spend(RulesConfig.LITTLE_DRAGON_MANA_COST)
+	mana_mgr.spend(cost)
 	hand.remove_at(hand_index)
 	
 	var beast = BeastInstance.create(card, player_id, turn_number)
