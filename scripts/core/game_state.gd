@@ -497,6 +497,144 @@ func cast_draconic_tome(player_id: int, hand_index: int, chosen_dragon: CardData
 	card_played.emit(player_id, card)
 	return res
 
+func cast_ancient_insight(player_id: int, hand_index: int) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "ancient_insight":
+		return {"success": false, "error": "Card is not Ancient Insight"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_discards[player_id].append(card)
+
+	var drawn_cards: Array = []
+	var draw_count: int = int(card.ability.get("draw_count", 2))
+	for _i in range(draw_count):
+		var d_card = draw_card(player_id)
+		if d_card != null:
+			drawn_cards.append(d_card)
+
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return {
+		"success": true,
+		"cards": drawn_cards,
+		"details": "Drew " + str(drawn_cards.size()) + " card(s) from deck."
+	}
+
+func cast_draconic_calling(player_id: int, hand_index: int, discard_hand_index: int = -1, chosen_dragons: Array = []) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "draconic_calling":
+		return {"success": false, "error": "Card is not Draconic Calling"}
+
+	if hand.size() < 2:
+		return {"success": false, "error": "Requires at least 1 other card in hand to discard"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	# Determine which card in hand to discard (other than Draconic Calling itself)
+	var disc_idx: int = discard_hand_index
+	if disc_idx < 0 or disc_idx >= hand.size() or disc_idx == hand_index:
+		disc_idx = 0 if hand_index != 0 else 1
+
+	var discarded_card: CardData = hand[disc_idx]
+	mana_mgr.spend(card.mana_cost)
+
+	# Remove both Draconic Calling and the discarded card safely
+	if disc_idx > hand_index:
+		hand.remove_at(disc_idx)
+		hand.remove_at(hand_index)
+	else:
+		hand.remove_at(hand_index)
+		hand.remove_at(disc_idx)
+
+	player_discards[player_id].append(card)
+	player_discards[player_id].append(discarded_card)
+
+	var res = AbilityResolver.execute_draconic_calling(player_decks[player_id], hand, chosen_dragons)
+	if res.success:
+		deck_shuffled.emit(player_id)
+		res["discarded"] = discarded_card
+		res["details"] = "Discarded " + discarded_card.name + ". " + str(res.get("details", ""))
+	else:
+		res["discarded"] = discarded_card
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return res
+
+func cast_soul_rebirth(player_id: int, hand_index: int, chosen_dragon: CardData = null) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "soul_rebirth":
+		return {"success": false, "error": "Card is not Soul Rebirth"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	var discard = player_discards[player_id]
+	var has_dragon_in_discard := false
+	for c in discard:
+		if c is CardData and c.card_type == "beast":
+			has_dragon_in_discard = true
+			break
+	if not has_dragon_in_discard:
+		return {"success": false, "error": "No Dragon Beast cards in your discard pile"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	var res = AbilityResolver.execute_soul_rebirth(discard, hand, chosen_dragon)
+	discard.append(card)
+
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return res
+
+func cast_elemental_convergence(player_id: int, hand_index: int, chosen_stones: Array = []) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "elemental_convergence":
+		return {"success": false, "error": "Card is not Elemental Convergence"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_discards[player_id].append(card)
+
+	var res = AbilityResolver.execute_elemental_convergence(player_decks[player_id], hand, chosen_stones)
+	if res.success:
+		deck_shuffled.emit(player_id)
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return res
+
+
 func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = null) -> Dictionary:
 	if player_id != active_player_id or is_game_over:
 		return {"success": false, "error": "Not your turn"}

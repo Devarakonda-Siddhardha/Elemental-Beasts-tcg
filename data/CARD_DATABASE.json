@@ -1394,6 +1394,73 @@
         "spell_element": "mechanical"
       },
       "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "ancient_insight",
+      "name": "Ancient Insight",
+      "card_type": "support",
+      "sub_type": "item",
+      "element": "neutral",
+      "mana_cost": 1,
+      "stone_cost": {},
+      "description": "Unravel ancient draconic wisdom. Draw 2 cards from your deck.",
+      "ability": {
+        "name": "Scholarly Wisdom",
+        "description": "Draw 2 cards from your deck.",
+        "effect": "draw_cards",
+        "draw_count": 2
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "draconic_calling",
+      "name": "Draconic Calling",
+      "card_type": "support",
+      "sub_type": "item",
+      "element": "neutral",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Discard 1 card from your hand: Search your deck for up to 2 Dragon Beast cards, add them to your hand, and shuffle your deck.",
+      "ability": {
+        "name": "Twin Dragon Herald",
+        "description": "Discard 1 card from your hand: Search your deck for up to 2 Dragon Beast cards, add them to your hand, and shuffle your deck.",
+        "effect": "discard_search_two_dragons",
+        "search_count": 2
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "soul_rebirth",
+      "name": "Soul Rebirth",
+      "card_type": "support",
+      "sub_type": "item",
+      "element": "neutral",
+      "mana_cost": 1,
+      "stone_cost": {},
+      "description": "Reawaken a fallen dragon's spirit. Put 1 Dragon Beast card from your discard pile into your hand.",
+      "ability": {
+        "name": "Draconic Resurrection",
+        "description": "Put 1 Dragon Beast card from your discard pile into your hand.",
+        "effect": "recover_dragon_from_discard"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "elemental_convergence",
+      "name": "Elemental Convergence",
+      "card_type": "support",
+      "sub_type": "item",
+      "element": "neutral",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Align the elemental ley lines. Search your deck for up to 2 Element Stone cards, add them to your hand, and shuffle your deck.",
+      "ability": {
+        "name": "Dual Stone Resonance",
+        "description": "Search your deck for up to 2 Element Stone cards, add them to your hand, and shuffle your deck.",
+        "effect": "search_two_stones",
+        "search_count": 2
+      },
+      "status": "CONFIRMED_SYSTEM"
     }
   ]
 }

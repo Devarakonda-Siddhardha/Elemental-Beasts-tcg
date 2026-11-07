@@ -548,8 +548,15 @@ func refresh_player_hand() -> void:
 			elif card.id == "god_dragon":
 				if GodDragonRitual.can_summon_god_dragon(card, field, stone_mgr, game_state.player_has_summoned_god_dragon[0]).valid:
 					playable = true
-			elif (card.id == "compass" or card.id == "draconic_tome") and mana_mgr.can_spend(card.mana_cost):
+			elif (card.id == "compass" or card.id == "draconic_tome" or card.id == "ancient_insight" or card.id == "elemental_convergence") and mana_mgr.can_spend(card.mana_cost):
 				playable = true
+			elif card.id == "draconic_calling" and mana_mgr.can_spend(card.mana_cost) and hand.size() >= 2:
+				playable = true
+			elif card.id == "soul_rebirth" and mana_mgr.can_spend(card.mana_cost):
+				for dc in game_state.get_discard(0):
+					if dc is CardData and dc.card_type == "beast":
+						playable = true
+						break
 			elif card.card_type == "spell" and mana_mgr.can_spend(card.mana_cost):
 				playable = true
 
@@ -728,6 +735,180 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 						refresh_full_ui()
 		)
 		return
+
+	# If Ancient Insight -> Draw 2 cards immediately (1 Mana)
+	if card.id == "ancient_insight":
+		var res_ai = game_state.cast_ancient_insight(0, hand_index)
+		if res_ai.success:
+			_animate_hand_fan = true
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+				get_node("/root/SoundManager").play_mana_spend()
+			log_message("  ✦ Ancient Insight: " + res_ai.details)
+			refresh_full_ui()
+		else:
+			log_message("[color=#e76f51]  ⚠️ " + res_ai.error + "[/color]")
+		return
+
+	# If Draconic Calling -> Discard 1 card from hand, then search deck for up to 2 Dragon Beast cards
+	if card.id == "draconic_calling":
+		if not game_state.get_mana(0).can_spend(card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Draconic Calling[/color]")
+			return
+		var other_hand_cards: Array = []
+		var hand_ref: Array = game_state.get_hand(0)
+		for idx_c in range(hand_ref.size()):
+			if idx_c != hand_index:
+				other_hand_cards.append(hand_ref[idx_c])
+		if other_hand_cards.is_empty():
+			log_message("[color=#e76f51]  ⚠️ Need at least 1 other card in hand to discard for Draconic Calling[/color]")
+			return
+		open_deck_search_modal(
+			"✦ DRACONIC CALLING (STEP 1/3) — SELECT 1 CARD FROM HAND TO DISCARD ✦",
+			other_hand_cards,
+			func(discard_choice: CardData):
+				var dragons_1: Array = []
+				for dc in game_state.get_deck(0):
+					if dc is CardData and dc.card_type == "beast":
+						dragons_1.append(dc)
+				if dragons_1.is_empty():
+					var c_idx = game_state.get_hand(0).find(card)
+					var d_idx = game_state.get_hand(0).find(discard_choice)
+					if c_idx != -1:
+						var res_no_d = game_state.cast_draconic_calling(0, c_idx, d_idx, [])
+						log_message("[color=#e76f51]  ⚠️ " + res_no_d.details + "[/color]")
+						refresh_full_ui()
+					return
+				open_deck_search_modal(
+					"✦ DRACONIC CALLING (STEP 2/3) — SELECT 1ST DRAGON FROM DECK ✦",
+					dragons_1,
+					func(first_dragon: CardData):
+						var dragons_2: Array = []
+						var skipped_first := false
+						for dc2 in game_state.get_deck(0):
+							if dc2 is CardData and dc2.card_type == "beast":
+								if dc2 == first_dragon and not skipped_first:
+									skipped_first = true
+									continue
+								dragons_2.append(dc2)
+						if dragons_2.is_empty():
+							var c_idx = game_state.get_hand(0).find(card)
+							var d_idx = game_state.get_hand(0).find(discard_choice)
+							if c_idx != -1:
+								var res1 = game_state.cast_draconic_calling(0, c_idx, d_idx, [first_dragon])
+								if res1.success:
+									_animate_hand_fan = true
+									if has_node("/root/SoundManager"):
+										get_node("/root/SoundManager").play_spell()
+										get_node("/root/SoundManager").play_mana_spend()
+									log_message("  ✦ Draconic Calling: " + res1.details)
+								refresh_full_ui()
+							return
+						open_deck_search_modal(
+							"✦ DRACONIC CALLING (STEP 3/3) — SELECT 2ND DRAGON FROM DECK ✦",
+							dragons_2,
+							func(second_dragon: CardData):
+								var c_idx = game_state.get_hand(0).find(card)
+								var d_idx = game_state.get_hand(0).find(discard_choice)
+								if c_idx != -1:
+									var res2 = game_state.cast_draconic_calling(0, c_idx, d_idx, [first_dragon, second_dragon])
+									if res2.success:
+										_animate_hand_fan = true
+										if has_node("/root/SoundManager"):
+											get_node("/root/SoundManager").play_spell()
+											get_node("/root/SoundManager").play_mana_spend()
+										log_message("  ✦ Draconic Calling: " + res2.details)
+									refresh_full_ui()
+						)
+				)
+		)
+		return
+
+	# If Soul Rebirth -> Put 1 Dragon Beast card from discard pile into hand (1 Mana)
+	if card.id == "soul_rebirth":
+		if not game_state.get_mana(0).can_spend(card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 1 💧 for Soul Rebirth[/color]")
+			return
+		var discard_dragons: Array = []
+		for dc in game_state.get_discard(0):
+			if dc is CardData and dc.card_type == "beast":
+				discard_dragons.append(dc)
+		if discard_dragons.is_empty():
+			log_message("[color=#e76f51]  ⚠️ No Dragon Beast cards in your discard pile![/color]")
+			return
+		open_deck_search_modal(
+			"✦ SOUL REBIRTH — RECOVER 1 DRAGON FROM YOUR DISCARD PILE ✦",
+			discard_dragons,
+			func(chosen_dragon: CardData):
+				var cur_idx = game_state.get_hand(0).find(card)
+				if cur_idx != -1:
+					var res_sr = game_state.cast_soul_rebirth(0, cur_idx, chosen_dragon)
+					if res_sr.success:
+						_animate_hand_fan = true
+						if has_node("/root/SoundManager"):
+							get_node("/root/SoundManager").play_spell()
+							get_node("/root/SoundManager").play_mana_spend()
+						log_message("  ✦ Soul Rebirth: " + res_sr.details)
+						refresh_full_ui()
+		)
+		return
+
+	# If Elemental Convergence -> Search deck for up to 2 Element Stones
+	if card.id == "elemental_convergence":
+		if not game_state.get_mana(0).can_spend(card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Elemental Convergence[/color]")
+			return
+		var stones_1: Array = []
+		for sc in game_state.get_deck(0):
+			if sc is CardData and sc.card_type == "stone":
+				stones_1.append(sc)
+		if stones_1.is_empty():
+			var res_empty = game_state.cast_elemental_convergence(0, hand_index, [])
+			log_message("[color=#e76f51]  ⚠️ " + res_empty.details + "[/color]")
+			refresh_full_ui()
+			return
+		open_deck_search_modal(
+			"✦ ELEMENTAL CONVERGENCE (1/2) — SELECT 1ST ELEMENT STONE ✦",
+			stones_1,
+			func(first_stone: CardData):
+				var stones_2: Array = []
+				var skipped := false
+				for sc2 in game_state.get_deck(0):
+					if sc2 is CardData and sc2.card_type == "stone":
+						if sc2 == first_stone and not skipped:
+							skipped = true
+							continue
+						stones_2.append(sc2)
+				if stones_2.is_empty():
+					var cur_idx = game_state.get_hand(0).find(card)
+					if cur_idx != -1:
+						var res_ec1 = game_state.cast_elemental_convergence(0, cur_idx, [first_stone])
+						if res_ec1.success:
+							_animate_hand_fan = true
+							if has_node("/root/SoundManager"):
+								get_node("/root/SoundManager").play_spell()
+								get_node("/root/SoundManager").play_mana_spend()
+							log_message("  ✦ Elemental Convergence: " + res_ec1.details)
+						refresh_full_ui()
+					return
+				open_deck_search_modal(
+					"✦ ELEMENTAL CONVERGENCE (2/2) — SELECT 2ND ELEMENT STONE ✦",
+					stones_2,
+					func(second_stone: CardData):
+						var cur_idx = game_state.get_hand(0).find(card)
+						if cur_idx != -1:
+							var res_ec2 = game_state.cast_elemental_convergence(0, cur_idx, [first_stone, second_stone])
+							if res_ec2.success:
+								_animate_hand_fan = true
+								if has_node("/root/SoundManager"):
+									get_node("/root/SoundManager").play_spell()
+									get_node("/root/SoundManager").play_mana_spend()
+								log_message("  ✦ Elemental Convergence: " + res_ec2.details)
+							refresh_full_ui()
+				)
+		)
+		return
+
 		
 	# If Evolution card -> enter evolving mode
 	if card.evolution_stage == 1:

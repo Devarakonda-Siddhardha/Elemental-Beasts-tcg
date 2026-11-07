@@ -94,7 +94,31 @@ func execute_turn() -> Array[String]:
 		else:
 			break
 			
-	# 5. Play Compass or Draconic Tome if in hand and mana >= 2
+	# 5. Play Setup Supporters (Ancient Insight, Elemental Convergence, Soul Rebirth, Draconic Calling, Compass, Draconic Tome)
+	var insight_idx = find_card_in_hand("ancient_insight")
+	if insight_idx != -1 and game_state.get_mana(ai_player_id).can_spend(1):
+		var res = game_state.cast_ancient_insight(ai_player_id, insight_idx)
+		if res.success:
+			action_log.append("AI cast Ancient Insight: " + res.details)
+
+	var conv_idx = find_card_in_hand("elemental_convergence")
+	if conv_idx != -1 and game_state.get_mana(ai_player_id).can_spend(2):
+		var res = game_state.cast_elemental_convergence(ai_player_id, conv_idx)
+		if res.success:
+			action_log.append("AI cast Elemental Convergence: " + res.details)
+
+	var rebirth_idx = find_card_in_hand("soul_rebirth")
+	if rebirth_idx != -1 and game_state.get_mana(ai_player_id).can_spend(1):
+		var res = game_state.cast_soul_rebirth(ai_player_id, rebirth_idx)
+		if res.success:
+			action_log.append("AI cast Soul Rebirth: " + res.details)
+
+	var calling_idx = find_card_in_hand("draconic_calling")
+	if calling_idx != -1 and game_state.get_mana(ai_player_id).can_spend(2) and game_state.get_hand(ai_player_id).size() >= 2:
+		var res = game_state.cast_draconic_calling(ai_player_id, calling_idx)
+		if res.success:
+			action_log.append("AI cast Draconic Calling: " + res.details)
+
 	var compass_idx = find_card_in_hand("compass")
 	if compass_idx != -1 and game_state.get_mana(ai_player_id).can_spend(RulesConfig.COMPASS_MANA_COST):
 		var res = game_state.cast_compass(ai_player_id, compass_idx)
@@ -106,6 +130,17 @@ func execute_turn() -> Array[String]:
 		var res = game_state.cast_draconic_tome(ai_player_id, tome_idx)
 		if res.success:
 			action_log.append("AI cast Draconic Tome: " + res.details)
+
+	# Play any newly drawn or searched Element Stones immediately!
+	while true:
+		var extra_stone_idx = find_playable_stone_in_hand()
+		if extra_stone_idx == -1:
+			break
+		var s_card = game_state.get_hand(ai_player_id)[extra_stone_idx]
+		if game_state.play_stone_from_hand(ai_player_id, extra_stone_idx):
+			action_log.append("AI placed " + s_card.name + " into Stone Pile.")
+		else:
+			break
 			
 	# 6. Cast Spells if possible
 	var enemy_id = 0 if ai_player_id == 1 else 1

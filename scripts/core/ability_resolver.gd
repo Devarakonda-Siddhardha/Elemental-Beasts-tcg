@@ -339,3 +339,107 @@ static func execute_draconic_tome(deck: Array, hand: Array, chosen_dragon: CardD
 			"card": null,
 			"details": "No Dragon Beast card found in deck."
 		}
+
+static func execute_draconic_calling(deck: Array, hand: Array, chosen_dragons: Array = []) -> Dictionary:
+	# Draconic Calling effect: Search deck for up to 2 Dragon Beast cards, add to hand, then shuffle deck.
+	var found: Array = []
+	for req in chosen_dragons:
+		if req is CardData and req.card_type == "beast" and deck.has(req):
+			deck.erase(req)
+			hand.append(req)
+			found.append(req)
+			if found.size() >= 2:
+				break
+
+	if found.size() < 2:
+		var remaining_scan: Array = deck.duplicate()
+		for c in remaining_scan:
+			if c is CardData and c.card_type == "beast":
+				deck.erase(c)
+				hand.append(c)
+				found.append(c)
+				if found.size() >= 2:
+					break
+
+	if found.size() > 0:
+		deck.shuffle()
+		var names: Array[String] = []
+		for fc in found:
+			names.append(fc.name)
+		return {
+			"success": true,
+			"cards": found,
+			"details": "Searched deck, added " + ", ".join(names) + " to hand, and shuffled deck."
+		}
+	else:
+		return {
+			"success": false,
+			"cards": [],
+			"details": "No Dragon Beast cards found in deck."
+		}
+
+static func execute_soul_rebirth(discard: Array, hand: Array, chosen_dragon: CardData = null) -> Dictionary:
+	# Soul Rebirth effect: Put 1 Dragon Beast card from your discard pile into your hand.
+	var found_dragon: CardData = null
+	if chosen_dragon and discard.has(chosen_dragon) and chosen_dragon.card_type == "beast":
+		found_dragon = chosen_dragon
+	else:
+		for i in range(discard.size() - 1, -1, -1):
+			var c = discard[i]
+			if c is CardData and c.card_type == "beast":
+				found_dragon = c
+				break
+
+	if found_dragon:
+		discard.erase(found_dragon)
+		hand.append(found_dragon)
+		return {
+			"success": true,
+			"card": found_dragon,
+			"details": "Recovered " + found_dragon.name + " from discard pile to hand!"
+		}
+	else:
+		return {
+			"success": false,
+			"card": null,
+			"details": "No Dragon Beast card found in discard pile."
+		}
+
+static func execute_elemental_convergence(deck: Array, hand: Array, chosen_stones: Array = []) -> Dictionary:
+	# Elemental Convergence effect: Search deck for up to 2 Element Stone cards, add to hand, then shuffle deck.
+	var found: Array = []
+	for req in chosen_stones:
+		if req is CardData and req.card_type == "stone" and deck.has(req):
+			deck.erase(req)
+			hand.append(req)
+			found.append(req)
+			if found.size() >= 2:
+				break
+
+	if found.size() < 2:
+		var remaining_scan: Array = deck.duplicate()
+		for c in remaining_scan:
+			if c is CardData and c.card_type == "stone":
+				deck.erase(c)
+				hand.append(c)
+				found.append(c)
+				if found.size() >= 2:
+					break
+
+	if found.size() > 0:
+		deck.shuffle()
+		var names: Array[String] = []
+		for fc in found:
+			names.append(fc.name)
+		return {
+			"success": true,
+			"cards": found,
+			"details": "Searched deck, added " + ", ".join(names) + " to hand, and shuffled deck."
+		}
+	else:
+		return {
+			"success": false,
+			"cards": [],
+			"details": "No Element Stone cards found in deck."
+		}
+

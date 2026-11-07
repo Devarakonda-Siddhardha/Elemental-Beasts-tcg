@@ -73,6 +73,7 @@ func run_all_tests() -> void:
 	test_30_elevenlabs_sfx_and_voice_lines()
 	test_31_realms_unlimited_stones_and_mono_element_decks()
 	test_32_settings_log_toggle_vfx_and_collection_ui()
+	test_33_neutral_setup_supporter_cards()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -883,5 +884,79 @@ func test_32_settings_log_toggle_vfx_and_collection_ui() -> void:
 	cc._build_reference_archive_layout()
 	assert_true(cc.has_node("LeftSidebar") and cc.has_node("FilterToolbar") and cc.element_filter_btns.size() == 7 and cc.search_input != null, "Requirement 32f: Card Collection matches reference layout with Left Sidebar, Search bar, 6 Element icon filters, Type/Rarity dropdowns, and Ornate Preview Panel")
 	cc.free()
+
+func test_33_neutral_setup_supporter_cards() -> void:
+	var state := GameState.new()
+	var db := state.card_db
+
+	# 1. Verify all 4 new neutral support cards and their dedicated artworks exist
+	var support_ids := ["ancient_insight", "draconic_calling", "soul_rebirth", "elemental_convergence"]
+	var all_exist := true
+	for sid in support_ids:
+		if not db.has(sid) or db[sid].card_type != "support" or db[sid].element != "neutral" or not FileAccess.file_exists("res://assets/art/" + sid + ".jpg"):
+			all_exist = false
+			printerr("Missing or invalid neutral support card: " + sid)
+	assert_true(all_exist, "Requirement 33a: Neutral Support cards 'ancient_insight', 'draconic_calling', 'soul_rebirth', and 'elemental_convergence' exist with dedicated artworks")
+
+	# 2. Test Ancient Insight (1 Mana -> Draw 2 cards from deck)
+	state.start_game()
+	state.player_decks[0] = [db["fire_stone"], db["little_dragon"], db["wind_stone"]]
+	state.player_hands[0] = [db["ancient_insight"]]
+	state.get_mana(0).current_mana = 5
+	var res_ai = state.cast_ancient_insight(0, 0)
+	assert_true(res_ai.success and state.get_mana(0).current_mana == 4 and state.player_hands[0].size() == 2 and state.player_discards[0].has(db["ancient_insight"]), "Requirement 33b: Ancient Insight spends 1 Mana and draws 2 cards from deck")
+
+	# 3. Test Draconic Calling (2 Mana -> Discard 1 card from hand -> Search deck for 2 Dragon Beast cards + shuffle)
+	state.start_game()
+	var d1: CardData = db["fire_dragon"]
+	var d2: CardData = db["little_dragon"]
+	var fodder: CardData = db["fire_stone"]
+	state.player_decks[0] = [db["wind_stone"], d1, db["ice_stone"], d2]
+	state.player_hands[0] = [db["draconic_calling"], fodder]
+	state.get_mana(0).current_mana = 5
+	var res_dc = state.cast_draconic_calling(0, 0, 1, [d1, d2])
+	assert_true(
+		res_dc.success and
+		state.get_mana(0).current_mana == 3 and
+		state.player_discards[0].has(fodder) and
+		state.player_discards[0].has(db["draconic_calling"]) and
+		state.player_hands[0].has(d1) and
+		state.player_hands[0].has(d2),
+		"Requirement 33c: Draconic Calling discards 1 card from hand and searches deck for 2 Dragon Beast cards"
+	)
+
+	# 4. Test Soul Rebirth (1 Mana -> Recover 1 Dragon Beast card from discard pile to hand)
+	state.start_game()
+	var fallen_dragon: CardData = db["volcovolt_dragon"]
+	state.player_discards[0] = [db["fire_stone"], fallen_dragon]
+	state.player_hands[0] = [db["soul_rebirth"]]
+	state.get_mana(0).current_mana = 5
+	var res_sr = state.cast_soul_rebirth(0, 0, fallen_dragon)
+	assert_true(
+		res_sr.success and
+		state.get_mana(0).current_mana == 4 and
+		state.player_hands[0].has(fallen_dragon) and
+		not state.player_discards[0].has(fallen_dragon) and
+		state.player_discards[0].has(db["soul_rebirth"]),
+		"Requirement 33d: Soul Rebirth spends 1 Mana and recovers 1 Dragon Beast card from discard pile to hand"
+	)
+
+	# 5. Test Elemental Convergence (2 Mana -> Search deck for 2 Element Stone cards + shuffle)
+	state.start_game()
+	var s1: CardData = db["lightning_stone"]
+	var s2: CardData = db["shadow_stone"]
+	state.player_decks[0] = [db["little_dragon"], s1, s2]
+	state.player_hands[0] = [db["elemental_convergence"]]
+	state.get_mana(0).current_mana = 5
+	var res_ec = state.cast_elemental_convergence(0, 0, [s1, s2])
+	assert_true(
+		res_ec.success and
+		state.get_mana(0).current_mana == 3 and
+		state.player_hands[0].has(s1) and
+		state.player_hands[0].has(s2) and
+		state.player_discards[0].has(db["elemental_convergence"]),
+		"Requirement 33e: Elemental Convergence spends 2 Mana and searches deck for 2 Element Stone cards"
+	)
+
 
 
