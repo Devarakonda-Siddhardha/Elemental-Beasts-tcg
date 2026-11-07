@@ -1,4 +1,0 @@
-# Godot 4 .gitignore
-.godot/
-*.translation
-build/
