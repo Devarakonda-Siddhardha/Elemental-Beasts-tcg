@@ -854,6 +854,161 @@
       "evolution_stage": 5,
       "max_per_deck": 1,
       "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "draconic_tome",
+      "name": "Draconic Tome",
+      "card_type": "support",
+      "sub_type": "item",
+      "element": "neutral",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "ability": {
+        "name": "Ancient Covenant",
+        "description": "Search your deck for any Dragon Beast card and add it to your hand, then shuffle your deck.",
+        "effect": "search_dragon"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "pyro_gale_dragon",
+      "name": "Pyro Gale Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "fire_wind",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 28,
+      "max_hp": 28,
+      "attack": 14,
+      "ability": {
+        "name": "Searing Cyclone",
+        "description": "Discard one Fire Stone and one Wind Stone: Deal 5 damage to all opposing Beasts and attack twice this turn.",
+        "cost": {
+          "fire": 1,
+          "wind": 1
+        },
+        "trigger": "activated",
+        "effect": "searing_cyclone"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "fire_dragon",
+        "wind_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "blizzard_zephyr_dragon",
+      "name": "Blizzard Zephyr Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "ice_wind",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 27,
+      "max_hp": 27,
+      "attack": 12,
+      "ability": {
+        "name": "Subzero Squall",
+        "description": "Discard one Ice Stone and one Wind Stone: Freeze up to 2 opposing Beasts and attack twice this turn.",
+        "cost": {
+          "ice": 1,
+          "wind": 1
+        },
+        "trigger": "activated",
+        "effect": "subzero_squall"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "ice_dragon",
+        "wind_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "molten_gear_dragon",
+      "name": "Molten Gear Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "fire_mechanical",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 30,
+      "max_hp": 30,
+      "attack": 14,
+      "ability": {
+        "name": "Smelting Overdrive",
+        "description": "Discard one Fire Stone and one Mechanical Stone: Deal 6 direct damage and gain +5 Shield HP.",
+        "cost": {
+          "fire": 1,
+          "mechanical": 1
+        },
+        "trigger": "activated",
+        "effect": "smelting_overdrive"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "fire_dragon",
+        "mechanical_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "cyber_volt_dragon",
+      "name": "Cyber Volt Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "lightning_mechanical",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 29,
+      "max_hp": 29,
+      "attack": 14,
+      "ability": {
+        "name": "EMP Railgun",
+        "description": "Discard one Lightning Stone and one Mechanical Stone: Deal 6 damage to target opposing Beast, apply Stun, and gain +3 Attack.",
+        "cost": {
+          "lightning": 1,
+          "mechanical": 1
+        },
+        "trigger": "activated",
+        "effect": "emp_railgun"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "lightning_dragon",
+        "mechanical_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "eclipse_frost_dragon",
+      "name": "Eclipse Frost Dragon",
+      "card_type": "beast",
+      "sub_type": "fusion_dragon",
+      "element": "shadow_ice",
+      "mana_cost": 0,
+      "stone_cost": {},
+      "hp": 28,
+      "max_hp": 28,
+      "attack": 13,
+      "ability": {
+        "name": "Umbral Permafrost",
+        "description": "Discard one Shadow Stone and one Ice Stone: Freeze all opposing Beasts and restore 4 HP to your Player.",
+        "cost": {
+          "shadow": 1,
+          "ice": 1
+        },
+        "trigger": "activated",
+        "effect": "umbral_permafrost"
+      },
+      "evolution_stage": 2,
+      "fusion_materials": [
+        "shadow_dragon",
+        "ice_dragon"
+      ],
+      "status": "CONFIRMED_SYSTEM"
     }
   ]
 }

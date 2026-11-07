@@ -3,6 +3,8 @@ extends Control
 
 @export var is_vs_ai: bool = true
 @export var use_legacy_art: bool = false
+@export var selected_starter_deck_index: int = 0
+@export var skip_coin_flip_overlay: bool = false
 
 var game_state: GameState
 var ai_controller: AIController
@@ -34,6 +36,7 @@ const ELEMENT_UI_COLORS = {
 
 @onready var piles_grid: GridContainer = $PilesPanel/Grid
 var pile_labels: Dictionary = {}
+var pile_cells: Dictionary = {}
 
 @onready var preview_holder: Control = $SelectedPanel/PreviewHolder
 var preview_card: CardUI = null
@@ -63,6 +66,7 @@ func _ready() -> void:
 	game_state.beast_evolved.connect(_on_beast_evolved)
 	game_state.beasts_fused.connect(_on_beasts_fused)
 	game_state.combat_resolved.connect(_on_combat_resolved)
+	game_state.deck_shuffled.connect(_on_deck_shuffled)
 	game_state.game_ended.connect(_on_game_ended)
 	
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
@@ -78,10 +82,16 @@ func _ready() -> void:
 		opp_field.gui_input.connect(_on_opponent_panel_input)
 		
 	_build_static_ui()
-	# Start match
-	log_message("[color=#ffd166]◆ Duel Started — 30 ❤️ | 5 💧[/color]")
-	game_state.start_game()
+	
+	var player_deck = GameState.load_starter_deck_ids_by_index(selected_starter_deck_index)
+	var ai_deck_idx = (selected_starter_deck_index + 3) % 6
+	var ai_deck = GameState.load_starter_deck_ids_by_index(ai_deck_idx)
+	
+	log_message("[color=#ffd166]◆ Duel Initialized — 30 ♥ | 5 💧[/color]")
+	game_state.start_game(player_deck, ai_deck, 0)
 	refresh_full_ui()
+	if not skip_coin_flip_overlay:
+		_show_start_of_match_coin_flip(player_deck, ai_deck)
 
 func refresh_full_ui() -> void:
 	update_hud()
@@ -102,8 +112,8 @@ func _build_static_ui() -> void:
 	# Deck / Discard / Banish grid (opponent row, then your row)
 	for c in piles_grid.get_children():
 		c.queue_free()
-	var zone_tooltips = {"Deck": "Deck", "Discard": "Discard Pile", "Banish": "Banish Zone"}
-	var zone_symbols = {"Deck": "🃏 0", "Discard": "💀 0", "Banish": "🌀 0"}
+	var zone_tooltips = {"Deck": "Deck (Click to Inspect / Shuffle)", "Discard": "Discard Pile (Click to Inspect)", "Banish": "Banish Zone"}
+	var zone_symbols = {"Deck": "❖ 0", "Discard": "✖ 0", "Banish": "✦ 0"}
 	for owner in ["enemy", "player"]:
 		for zone in ["Deck", "Discard", "Banish"]:
 			var cell = PanelContainer.new()
@@ -119,10 +129,12 @@ func _build_static_ui() -> void:
 			var v = VBoxContainer.new()
 			v.alignment = BoxContainer.ALIGNMENT_CENTER
 			v.add_theme_constant_override("separation", 2)
+			v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			var icon = TextureRect.new()
 			icon.custom_minimum_size = Vector2(0, 44)
 			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			if zone != "Banish":
 				icon.texture = load("res://assets/art/card_back.png")
 				if zone == "Discard":
@@ -133,11 +145,23 @@ func _build_static_ui() -> void:
 			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			lbl.add_theme_font_size_override("font_size", 11)
 			lbl.text = zone_symbols[zone]
+			lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			v.add_child(icon)
 			v.add_child(lbl)
 			cell.add_child(v)
 			piles_grid.add_child(cell)
-			pile_labels[owner + "_" + zone] = lbl
+			var cell_key = owner + "_" + zone
+			pile_labels[cell_key] = lbl
+			pile_cells[cell_key] = cell
+			if owner == "player" and (zone == "Deck" or zone == "Discard"):
+				var z_cap = zone
+				cell.gui_input.connect(func(ev: InputEvent):
+					if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+						if z_cap == "Deck":
+							open_deck_search_modal("✦ YOUR REMAINING DECK (SHUFFLED VIEW) ✦", game_state.get_deck(0), Callable(), true)
+						else:
+							open_deck_search_modal("✦ YOUR DISCARD PILE ✦", game_state.get_discard(0), Callable(), false)
+				)
 
 func _update_mana_pips(container: HBoxContainer, current: int) -> void:
 	if container.get_child_count() != RulesConfig.MAX_NORMAL_MANA:
@@ -179,12 +203,12 @@ func update_hud() -> void:
 	refresh_stones_display(1, opponent_stones_container)
 
 	if pile_labels.has("player_Deck"):
-		pile_labels["player_Deck"].text = "🃏 " + str(game_state.player_decks[0].size())
-		pile_labels["player_Discard"].text = "💀 " + str(game_state.player_discards[0].size())
-		pile_labels["player_Banish"].text = "🌀 0"
-		pile_labels["enemy_Deck"].text = "🃏 " + str(game_state.player_decks[1].size())
-		pile_labels["enemy_Discard"].text = "💀 " + str(game_state.player_discards[1].size())
-		pile_labels["enemy_Banish"].text = "🌀 0"
+		pile_labels["player_Deck"].text = "❖ " + str(game_state.player_decks[0].size())
+		pile_labels["player_Discard"].text = "✖ " + str(game_state.player_discards[0].size())
+		pile_labels["player_Banish"].text = "✦ 0"
+		pile_labels["enemy_Deck"].text = "❖ " + str(game_state.player_decks[1].size())
+		pile_labels["enemy_Discard"].text = "✖ " + str(game_state.player_discards[1].size())
+		pile_labels["enemy_Banish"].text = "✦ 0"
 
 	turn_label.text = "TURN " + str(game_state.turn_number)
 	if game_state.active_player_id == 0:
@@ -324,7 +348,7 @@ func refresh_player_hand() -> void:
 			elif card.id == "god_dragon":
 				if GodDragonRitual.can_summon_god_dragon(card, field, stone_mgr, game_state.player_has_summoned_god_dragon[0]).valid:
 					playable = true
-			elif card.id == "compass" and mana_mgr.can_spend(RulesConfig.COMPASS_MANA_COST):
+			elif (card.id == "compass" or card.id == "draconic_tome") and mana_mgr.can_spend(card.mana_cost):
 				playable = true
 			elif card.card_type == "spell" and mana_mgr.can_spend(card.mana_cost):
 				playable = true
@@ -401,17 +425,64 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 			log_message("[color=#e76f51]  ⚠️ Need 2 💧 & field space[/color]")
 		return
 		
-	# If Compass -> cast directly
+	# If Compass -> open interactive Deck Search View for Element Stones!
 	if card.id == "compass":
-		var res = game_state.cast_compass(0, hand_index)
-		if res.success:
-			if has_node("/root/SoundManager"):
-				get_node("/root/SoundManager").play_spell()
-				get_node("/root/SoundManager").play_mana_spend()
-			log_message("  🧭 Compass: " + res.details)
+		if not game_state.get_mana(0).can_spend(RulesConfig.COMPASS_MANA_COST):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Compass[/color]")
+			return
+		var stones_in_deck: Array = []
+		for c in game_state.get_deck(0):
+			if c is CardData and c.card_type == "stone":
+				stones_in_deck.append(c)
+		if stones_in_deck.is_empty():
+			var res_empty = game_state.cast_compass(0, hand_index)
+			log_message("[color=#e76f51]  ⚠️ " + res_empty.details + "[/color]")
 			refresh_full_ui()
-		else:
-			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
+			return
+		open_deck_search_modal(
+			"✦ COMPASS — SELECT AN ELEMENT STONE FROM YOUR DECK ✦",
+			stones_in_deck,
+			func(chosen: CardData):
+				var cur_idx = game_state.get_hand(0).find(card)
+				if cur_idx != -1:
+					var res = game_state.cast_compass(0, cur_idx, chosen)
+					if res.success:
+						if has_node("/root/SoundManager"):
+							get_node("/root/SoundManager").play_spell()
+							get_node("/root/SoundManager").play_mana_spend()
+						log_message("  ✦ Compass: " + res.details)
+						refresh_full_ui()
+		)
+		return
+
+	# If Draconic Tome -> open interactive Deck Search View for Dragon Beasts!
+	if card.id == "draconic_tome":
+		if not game_state.get_mana(0).can_spend(card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Draconic Tome[/color]")
+			return
+		var dragons_in_deck: Array = []
+		for c in game_state.get_deck(0):
+			if c is CardData and c.card_type == "beast":
+				dragons_in_deck.append(c)
+		if dragons_in_deck.is_empty():
+			var res_empty = game_state.cast_draconic_tome(0, hand_index)
+			log_message("[color=#e76f51]  ⚠️ " + res_empty.details + "[/color]")
+			refresh_full_ui()
+			return
+		open_deck_search_modal(
+			"✦ DRACONIC TOME — SELECT A DRAGON BEAST FROM YOUR DECK ✦",
+			dragons_in_deck,
+			func(chosen: CardData):
+				var cur_idx = game_state.get_hand(0).find(card)
+				if cur_idx != -1:
+					var res = game_state.cast_draconic_tome(0, cur_idx, chosen)
+					if res.success:
+						if has_node("/root/SoundManager"):
+							get_node("/root/SoundManager").play_spell()
+							get_node("/root/SoundManager").play_mana_spend()
+						log_message("  ✦ Draconic Tome: " + res.details)
+						refresh_full_ui()
+		)
 		return
 		
 	# If Evolution card -> enter evolving mode
@@ -660,7 +731,7 @@ func _on_turn_ended(turn: int, player_id: int) -> void:
 
 func _on_card_drawn(player_id: int, card: CardData) -> void:
 	if player_id == 0:
-		log_message("  🃏 Drew [b]" + card.name + "[/b]")
+		log_message("  ❖ Drew [b]" + card.name + "[/b]")
 
 func _on_beast_summoned(player_id: int, beast: BeastInstance) -> void:
 	pass
@@ -699,3 +770,303 @@ func _on_menu_pressed() -> void:
 func log_message(text: String) -> void:
 	if log_label:
 		log_label.append_text(text + "\n")
+
+func _on_deck_shuffled(player_id: int) -> void:
+	play_deck_shuffle_animation(player_id)
+
+func play_deck_shuffle_animation(player_id: int) -> void:
+	var key = ("player" if player_id == 0 else "enemy") + "_Deck"
+	var deck_cell: Control = pile_cells.get(key)
+	if not deck_cell or not is_inside_tree():
+		return
+	var origin = deck_cell.get_global_rect().get_center()
+	var card_back_tex = load("res://assets/art/card_back.png") if ResourceLoader.exists("res://assets/art/card_back.png") else null
+
+	var fx_layer = Control.new()
+	fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fx_layer.z_index = 45
+	add_child(fx_layer)
+
+	var num_cards = 8
+	for i in range(num_cards):
+		var sp = TextureRect.new()
+		sp.texture = card_back_tex
+		sp.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		sp.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		sp.size = Vector2(54, 75)
+		sp.pivot_offset = Vector2(27, 37.5)
+		sp.position = origin - sp.pivot_offset
+		sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		fx_layer.add_child(sp)
+
+		var side = -1.0 if (i % 2 == 0) else 1.0
+		var spread = Vector2(side * (28.0 + float(i) * 4.5), -14.0 + float(i % 3) * 6.0)
+		var tw = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_interval(float(i) * 0.025)
+		tw.tween_property(sp, "position", origin - sp.pivot_offset + spread, 0.14)
+		tw.parallel().tween_property(sp, "rotation_degrees", side * (16.0 + float(i) * 2.0), 0.14)
+		tw.tween_property(sp, "position", origin - sp.pivot_offset + Vector2(-spread.x * 0.45, -4.0), 0.12)
+		tw.parallel().tween_property(sp, "rotation_degrees", -side * 8.0, 0.12)
+		tw.tween_property(sp, "position", origin - sp.pivot_offset, 0.14)
+		tw.parallel().tween_property(sp, "rotation_degrees", 0.0, 0.14)
+
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_card_hover()
+
+	var clean_tw = create_tween()
+	clean_tw.tween_interval(0.68)
+	clean_tw.tween_callback(fx_layer.queue_free)
+
+func open_deck_search_modal(title_text: String, cards_to_show: Array, on_select: Callable = Callable(), shuffle_on_close: bool = false) -> void:
+	if has_node("DeckSearchModal"):
+		get_node("DeckSearchModal").queue_free()
+
+	var modal = ColorRect.new()
+	modal.name = "DeckSearchModal"
+	modal.color = Color(0.02, 0.02, 0.06, 0.88)
+	modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	modal.z_index = 50
+	add_child(modal)
+
+	var panel = PanelContainer.new()
+	panel.position = Vector2(90, 56)
+	panel.custom_minimum_size = Vector2(1100, 608)
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.06, 0.13, 0.98)
+	sb.border_color = Color(0.95, 0.78, 0.28, 1.0)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = 20
+	sb.content_margin_right = 20
+	sb.content_margin_top = 16
+	sb.content_margin_bottom = 16
+	panel.add_theme_stylebox_override("panel", sb)
+	modal.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	var top_h = HBoxContainer.new()
+	top_h.add_theme_constant_override("separation", 12)
+	vbox.add_child(top_h)
+
+	var title_lbl = Label.new()
+	title_lbl.text = title_text + "  (" + str(cards_to_show.size()) + " Cards)"
+	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_lbl.add_theme_font_size_override("font_size", 18)
+	title_lbl.add_theme_color_override("font_color", Color(1.0, 0.88, 0.42))
+	top_h.add_child(title_lbl)
+
+	var search_input = LineEdit.new()
+	search_input.placeholder_text = "⌕ Filter cards..."
+	search_input.custom_minimum_size = Vector2(210, 32)
+	search_input.clear_button_enabled = true
+	top_h.add_child(search_input)
+
+	var shuffle_btn = Button.new()
+	shuffle_btn.text = "↻ Shuffle Deck"
+	shuffle_btn.custom_minimum_size = Vector2(140, 32)
+	top_h.add_child(shuffle_btn)
+
+	var close_btn = Button.new()
+	close_btn.text = "✖ Close"
+	close_btn.custom_minimum_size = Vector2(100, 32)
+	top_h.add_child(close_btn)
+
+	var scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
+	var grid = GridContainer.new()
+	grid.columns = 6
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 14)
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(grid)
+
+	# Display a randomized/sorted copy when inspecting deck so hidden draw order is not spoiled
+	var display_list: Array = cards_to_show.duplicate()
+	if shuffle_on_close:
+		display_list.shuffle()
+
+	var populate_grid = func(q: String):
+		for ch in grid.get_children():
+			ch.queue_free()
+		var clean_q = q.strip_edges().to_lower()
+		for c in display_list:
+			if not (c is CardData):
+				continue
+			if clean_q != "" and not (c.name.to_lower().contains(clean_q) or c.element.to_lower().contains(clean_q) or c.card_type.to_lower().contains(clean_q)):
+				continue
+			var slot = Control.new()
+			slot.custom_minimum_size = Vector2(150, 212)
+			var cui: CardUI = card_ui_prefab.instantiate()
+			cui.base_scale = Vector2(0.74, 0.74)
+			slot.add_child(cui)
+			cui.setup(c, use_legacy_art)
+			cui.pivot_offset = Vector2.ZERO
+			cui.scale = Vector2(0.74, 0.74)
+			cui.position = Vector2(1, 2)
+			var card_ref: CardData = c
+			cui.card_clicked.connect(func(_clicked):
+				if on_select.is_valid():
+					modal.queue_free()
+					on_select.call(card_ref)
+				else:
+					_on_any_card_hovered(cui, true)
+			)
+			grid.add_child(slot)
+
+	populate_grid.call("")
+	search_input.text_changed.connect(func(txt: String): populate_grid.call(txt))
+
+	shuffle_btn.pressed.connect(func():
+		game_state.get_deck(0).shuffle()
+		display_list.shuffle()
+		populate_grid.call(search_input.text)
+		play_deck_shuffle_animation(0)
+		log_message("  ↻ Shuffled your Deck.")
+	)
+
+	close_btn.pressed.connect(func():
+		if shuffle_on_close:
+			game_state.get_deck(0).shuffle()
+			play_deck_shuffle_animation(0)
+		modal.queue_free()
+	)
+
+func _show_start_of_match_coin_flip(player_deck: Array, ai_deck: Array) -> void:
+	if has_node("CoinFlipOverlay"):
+		get_node("CoinFlipOverlay").queue_free()
+
+	var overlay = ColorRect.new()
+	overlay.name = "CoinFlipOverlay"
+	overlay.color = Color(0.02, 0.02, 0.06, 0.90)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 60
+	add_child(overlay)
+
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(640, 480)
+	panel.position = Vector2(320, 120)
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.05, 0.12, 0.98)
+	sb.border_color = Color(0.95, 0.78, 0.28, 1.0)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(14)
+	sb.content_margin_left = 24
+	sb.content_margin_right = 24
+	sb.content_margin_top = 20
+	sb.content_margin_bottom = 20
+	panel.add_theme_stylebox_override("panel", sb)
+	overlay.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 14)
+	panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "✦ ANCIENT ELEMENTAL COIN TOSS ✦"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.42))
+	vbox.add_child(title)
+
+	var sub = Label.new()
+	sub.text = "HEADS (Solar God Dragon Crest) = YOU GO FIRST\nTAILS (Abyssal Shadow Dragon Crest) = OPPONENT GOES FIRST"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 12)
+	sub.add_theme_color_override("font_color", Color(0.84, 0.84, 0.92))
+	vbox.add_child(sub)
+
+	var coin_holder = Control.new()
+	coin_holder.custom_minimum_size = Vector2(240, 240)
+	coin_holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	vbox.add_child(coin_holder)
+
+	var coin_tex = TextureRect.new()
+	var heads_tex = load("res://assets/art/coin_heads.png") if ResourceLoader.exists("res://assets/art/coin_heads.png") else null
+	var tails_tex = load("res://assets/art/coin_tails.png") if ResourceLoader.exists("res://assets/art/coin_tails.png") else null
+	coin_tex.texture = heads_tex
+	coin_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	coin_tex.size = Vector2(220, 220)
+	coin_tex.position = Vector2(10, 10)
+	coin_tex.pivot_offset = Vector2(110, 110)
+	coin_holder.add_child(coin_tex)
+
+	var status_lbl = Label.new()
+	status_lbl.text = "Click below to toss the Elemental Coin & shuffle both decks!"
+	status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_lbl.add_theme_font_size_override("font_size", 15)
+	status_lbl.add_theme_color_override("font_color", Color(0.95, 0.90, 0.65))
+	vbox.add_child(status_lbl)
+
+	var toss_btn = Button.new()
+	toss_btn.text = "✦ Toss Elemental Coin"
+	toss_btn.custom_minimum_size = Vector2(240, 44)
+	toss_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var btn_sb = StyleBoxFlat.new()
+	btn_sb.bg_color = Color(0.36, 0.22, 0.06, 0.98)
+	btn_sb.border_color = Color(1.0, 0.84, 0.32, 1.0)
+	btn_sb.set_border_width_all(2)
+	btn_sb.set_corner_radius_all(8)
+	toss_btn.add_theme_stylebox_override("normal", btn_sb)
+	toss_btn.add_theme_stylebox_override("hover", btn_sb)
+	toss_btn.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(toss_btn)
+
+	toss_btn.pressed.connect(func():
+		toss_btn.disabled = true
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_fusion()
+		var player_wins_toss: bool = (randi() % 2 == 0)
+		var total_half_turns = 8 if player_wins_toss else 9
+		status_lbl.text = "Tossing Elemental Coin..."
+
+		var tw = create_tween()
+		for step in range(total_half_turns):
+			var next_is_tails = (step % 2 == 0)
+			tw.tween_property(coin_tex, "scale:x", 0.04, 0.08)
+			tw.tween_callback(func():
+				coin_tex.texture = tails_tex if next_is_tails else heads_tex
+				if has_node("/root/SoundManager"):
+					get_node("/root/SoundManager").play_card_hover()
+			)
+			tw.tween_property(coin_tex, "scale:x", 1.0, 0.08)
+
+		tw.tween_callback(func():
+			if player_wins_toss:
+				coin_tex.texture = heads_tex
+				status_lbl.text = "☀ HEADS — SOLAR GOD DRAGON CREST! You Go First!"
+				status_lbl.add_theme_color_override("font_color", Color(0.35, 1.0, 0.50))
+				log_message("[color=#52b788]◆ Coin Toss: HEADS (Solar Crest) — You take Turn 1![/color]")
+				game_state.start_game(player_deck, ai_deck, 0)
+			else:
+				coin_tex.texture = tails_tex
+				status_lbl.text = "☾ TAILS — ABYSSAL SHADOW CREST! Opponent Goes First!"
+				status_lbl.add_theme_color_override("font_color", Color(0.82, 0.58, 1.0))
+				log_message("[color=#c77dff]◆ Coin Toss: TAILS (Abyssal Crest) — Opponent takes Turn 1![/color]")
+				game_state.start_game(player_deck, ai_deck, 1)
+			refresh_full_ui()
+			play_deck_shuffle_animation(0)
+			play_deck_shuffle_animation(1)
+		)
+		tw.tween_interval(1.15)
+		tw.tween_property(overlay, "modulate:a", 0.0, 0.28)
+		tw.tween_callback(func():
+			overlay.queue_free()
+			if not player_wins_toss and is_vs_ai and game_state.active_player_id == 1:
+				var ai_timer = get_tree().create_timer(0.55)
+				ai_timer.timeout.connect(func():
+					var logs = ai_controller.execute_turn()
+					for l in logs:
+						log_message("[color=#a8dadc]  " + l + "[/color]")
+					refresh_full_ui()
+				)
+		)
+	)

@@ -68,6 +68,8 @@ func run_all_tests() -> void:
 	test_25_supporter_card_artworks()
 	test_26_lightning_dragon_artwork_and_layering()
 	test_27_elemental_spells_for_each_element()
+	test_28_six_elemental_starter_decks_and_new_cards()
+	test_29_deck_search_shuffle_and_coin_flip()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -612,3 +614,60 @@ func test_27_elemental_spells_for_each_element() -> void:
 	state.get_mana(0).current_mana = 5
 	var res_shadow = state.cast_spell(0, 0, target_enemy)
 	assert_true(res_shadow.success and state.player_hp[0] == 23, "Requirement 27i: Abyssal Drain heals player for 3 HP")
+
+func test_28_six_elemental_starter_decks_and_new_cards() -> void:
+	var file = FileAccess.open("res://data/default_decks.json", FileAccess.READ)
+	var json = JSON.new()
+	json.parse(file.get_as_text())
+	file.close()
+	var decks: Array = json.get_data().get("decks", [])
+	assert_true(decks.size() == 6, "Requirement 28a: Exactly 6 primary-element Starter Decks exist in default_decks.json", "Actual: " + str(decks.size()))
+
+	var expected_elements = ["fire", "lightning", "wind", "ice", "shadow", "mechanical"]
+	var found_elements: Array[String] = []
+	for d in decks:
+		var el = str(d.get("element", ""))
+		found_elements.append(el)
+		var cards: Array = d.get("cards", [])
+		var val = RulesConfig.validate_deck(cards)
+		assert_true(val.valid and cards.size() == 40, "Requirement 28b: Starter Deck '" + str(d.get("name", "")) + "' (" + el + ") is a valid 40-card deck", val.error)
+
+	var all_six_covered = true
+	for req_el in expected_elements:
+		if not found_elements.has(req_el):
+			all_six_covered = false
+	assert_true(all_six_covered, "Requirement 28c: All 6 primary elements (Fire, Lightning, Wind, Ice, Shadow, Mechanical) have dedicated starter decks")
+
+	var db = CardData.load_database()
+	var new_card_ids = ["draconic_tome", "pyro_gale_dragon", "blizzard_zephyr_dragon", "molten_gear_dragon", "cyber_volt_dragon", "eclipse_frost_dragon"]
+	for cid in new_card_ids:
+		assert_true(db.has(cid), "Requirement 28d: New card '" + cid + "' exists in CARD_DATABASE.json")
+		assert_true(FileAccess.file_exists("res://assets/art/" + cid + ".jpg"), "Requirement 28e: New card '" + cid + "' has dedicated artwork")
+
+func test_29_deck_search_shuffle_and_coin_flip() -> void:
+	var state = GameState.new()
+	state.start_game()
+	var shuffle_signals: Array[int] = []
+	state.deck_shuffled.connect(func(pid: int): shuffle_signals.append(pid))
+
+	# Test choosing a specific stone via Compass
+	var target_stone = state.card_db["ice_stone"]
+	state.player_decks[0] = [state.card_db["fire_stone"], target_stone, state.card_db["wind_stone"]]
+	state.player_hands[0] = [state.card_db["compass"]]
+	state.get_mana(0).current_mana = 5
+	var comp_res = state.cast_compass(0, 0, target_stone)
+	assert_true(comp_res.success and state.player_hands[0].has(target_stone) and shuffle_signals.size() >= 1, "Requirement 29a: Compass allows selecting a specific Element Stone from deck and triggers deck shuffle")
+
+	# Test choosing a specific dragon via Draconic Tome
+	var target_dragon = state.card_db["pyro_gale_dragon"]
+	state.player_decks[0] = [state.card_db["little_dragon"], target_dragon, state.card_db["fire_stone"]]
+	state.player_hands[0] = [state.card_db["draconic_tome"]]
+	state.get_mana(0).current_mana = 5
+	var tome_res = state.cast_draconic_tome(0, 0, target_dragon)
+	assert_true(tome_res.success and state.player_hands[0].has(target_dragon) and shuffle_signals.size() >= 2, "Requirement 29b: Draconic Tome searches deck for a chosen Dragon Beast and triggers deck shuffle")
+
+	# Test Coin textures and start-of-match starting_player parameter
+	assert_true(FileAccess.file_exists("res://assets/art/coin_heads.png") and FileAccess.file_exists("res://assets/art/coin_tails.png"), "Requirement 29c: Themed Solar God Dragon (Heads) and Abyssal Shadow Dragon (Tails) coin textures exist")
+	state.start_game([], [], 1)
+	assert_true(state.active_player_id == 1, "Requirement 29d: Coin toss result can set Opponent (Player 1) as Turn 1 starting player")
+

@@ -13,6 +13,7 @@ signal beast_ascended(player_id: int, beast: BeastInstance)
 signal god_dragon_summoned(player_id: int, beast: BeastInstance)
 signal spell_cast(player_id: int, card: CardData)
 signal combat_resolved(result: Dictionary)
+signal deck_shuffled(player_id: int)
 signal game_ended(winner_id: int, reason: String)
 
 var turn_number: int = 1
@@ -53,11 +54,11 @@ func get_mana(player_id: int) -> ManaManager:
 func get_stones(player_id: int) -> StoneManager:
 	return player_stones[player_id]
 
-func start_game(deck0_ids: Array = [], deck1_ids: Array = []) -> void:
+func start_game(deck0_ids: Array = [], deck1_ids: Array = [], starting_player: int = 0) -> void:
 	is_game_over = false
 	winner_id = -1
 	turn_number = 1
-	active_player_id = 0
+	active_player_id = clampi(starting_player, 0, 1)
 	
 	for p in range(2):
 		player_hp[p] = RulesConfig.STARTING_PLAYER_HP
@@ -100,13 +101,32 @@ func start_game(deck0_ids: Array = [], deck1_ids: Array = []) -> void:
 				player_decks[p].append(copy)
 				
 		player_decks[p].shuffle()
+		deck_shuffled.emit(p)
 		
 		# Draw initial hand (5 cards)
 		for i in range(RulesConfig.STARTING_HAND_SIZE):
 			draw_card(p)
 			
-	# Start Turn 1 for Player 0
+	# Start Turn 1 for starting_player
 	start_turn()
+
+static func load_starter_deck_ids_by_index(deck_idx: int = 0) -> Array[String]:
+	var path = "res://data/default_decks.json"
+	if FileAccess.file_exists(path):
+		var f = FileAccess.open(path, FileAccess.READ)
+		var text = f.get_as_text()
+		f.close()
+		var json = JSON.new()
+		if json.parse(text) == OK:
+			var data = json.get_data()
+			var decks = data.get("decks", [])
+			if decks.size() > 0:
+				var idx = clampi(deck_idx, 0, decks.size() - 1)
+				var out: Array[String] = []
+				for cid in decks[idx].get("cards", []):
+					out.append(str(cid))
+				return out
+	return []
 
 func get_default_deck_ids() -> Array[String]:
 	return [
@@ -389,7 +409,7 @@ func summon_god_dragon(player_id: int, hand_index: int) -> Dictionary:
 		return {"success": true, "beast": god_beast}
 	return res
 
-func cast_compass(player_id: int, hand_index: int) -> Dictionary:
+func cast_compass(player_id: int, hand_index: int, chosen_stone: CardData = null) -> Dictionary:
 	if player_id != active_player_id or is_game_over:
 		return {"success": false, "error": "Not your turn"}
 	var hand = player_hands[player_id]
@@ -407,7 +427,34 @@ func cast_compass(player_id: int, hand_index: int) -> Dictionary:
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 	
-	var res = AbilityResolver.execute_compass(player_decks[player_id], hand)
+	var res = AbilityResolver.execute_compass(player_decks[player_id], hand, chosen_stone)
+	if res.success:
+		deck_shuffled.emit(player_id)
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return res
+
+func cast_draconic_tome(player_id: int, hand_index: int, chosen_dragon: CardData = null) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "draconic_tome":
+		return {"success": false, "error": "Card is not Draconic Tome"}
+		
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires 2 Mana)"}
+		
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_discards[player_id].append(card)
+	
+	var res = AbilityResolver.execute_draconic_tome(player_decks[player_id], hand, chosen_dragon)
+	if res.success:
+		deck_shuffled.emit(player_id)
 	spell_cast.emit(player_id, card)
 	card_played.emit(player_id, card)
 	return res

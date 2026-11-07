@@ -83,12 +83,18 @@ func execute_turn() -> Array[String]:
 		else:
 			break
 			
-	# 5. Play Compass if in hand and mana >= 2
+	# 5. Play Compass or Draconic Tome if in hand and mana >= 2
 	var compass_idx = find_card_in_hand("compass")
 	if compass_idx != -1 and game_state.get_mana(ai_player_id).can_spend(RulesConfig.COMPASS_MANA_COST):
 		var res = game_state.cast_compass(ai_player_id, compass_idx)
 		if res.success:
 			action_log.append("AI cast Compass: " + res.details)
+			
+	var tome_idx = find_card_in_hand("draconic_tome")
+	if tome_idx != -1 and game_state.get_mana(ai_player_id).can_spend(2):
+		var res = game_state.cast_draconic_tome(ai_player_id, tome_idx)
+		if res.success:
+			action_log.append("AI cast Draconic Tome: " + res.details)
 			
 	# 6. Cast Spells if possible
 	var enemy_id = 0 if ai_player_id == 1 else 1

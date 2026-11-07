@@ -169,30 +169,115 @@ static func execute_beast_ability(
 			beast.heal(5)
 			result_info["details"] = "Tidal Restoration restored 5 HP!"
 			
+		"searing_cyclone":
+			# Pyro Gale Dragon: 5 damage to all opposing Beasts + attack twice
+			var hits = 0
+			for eb in all_enemy_beasts:
+				if eb is BeastInstance and not eb.is_dead():
+					eb.take_damage(5)
+					hits += 1
+			beast.max_attacks_per_turn = 2
+			result_info["details"] = "Searing Cyclone dealt 5 damage to " + str(hits) + " foe(s) and granted double attack!"
+			
+		"subzero_squall":
+			# Blizzard Zephyr Dragon: Freeze up to 2 opposing Beasts + attack twice
+			var frozen = 0
+			for eb in all_enemy_beasts:
+				if eb is BeastInstance and not eb.is_dead():
+					eb.freeze_turns = maxi(eb.freeze_turns, RulesConfig.DEFAULT_FREEZE_DURATION)
+					frozen += 1
+					if frozen >= 2:
+						break
+			beast.max_attacks_per_turn = 2
+			result_info["details"] = "Subzero Squall froze " + str(frozen) + " foe(s) and granted double attack!"
+			
+		"smelting_overdrive":
+			# Molten Gear Dragon: Deal 6 damage to target/first enemy beast + gain +5 Shield HP
+			beast.shield_hp += 5
+			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:
+				target_enemy_beasts[0].take_damage(6)
+			elif all_enemy_beasts.size() > 0 and all_enemy_beasts[0] is BeastInstance:
+				all_enemy_beasts[0].take_damage(6)
+			result_info["details"] = "Smelting Overdrive dealt 6 damage and fortified +5 Shield HP!"
+			
+		"emp_railgun":
+			# Cyber Volt Dragon: Deal 6 damage + Stun + gain +3 Attack
+			beast.bonus_attack += 3
+			var hit_target: BeastInstance = null
+			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:
+				hit_target = target_enemy_beasts[0]
+			elif all_enemy_beasts.size() > 0 and all_enemy_beasts[0] is BeastInstance:
+				hit_target = all_enemy_beasts[0]
+			if hit_target:
+				hit_target.take_damage(6)
+				hit_target.stun_turns = maxi(hit_target.stun_turns, RulesConfig.DEFAULT_STUN_DURATION)
+			result_info["details"] = "EMP Railgun dealt 6 damage, applied Stun, and boosted +3 Attack!"
+			
+		"umbral_permafrost":
+			# Eclipse Frost Dragon: Freeze all opposing Beasts + heal friendly beast/player
+			var frozen_all = 0
+			for eb in all_enemy_beasts:
+				if eb is BeastInstance and not eb.is_dead():
+					eb.freeze_turns = maxi(eb.freeze_turns, RulesConfig.DEFAULT_FREEZE_DURATION)
+					frozen_all += 1
+			beast.heal(4)
+			result_info["details"] = "Umbral Permafrost froze " + str(frozen_all) + " foe(s) and restored 4 HP!"
+			
 		_:
 			result_info["details"] = "Ability activated."
 			
 	return result_info
 
-static func execute_compass(deck: Array, hand: Array) -> Dictionary:
-	# Compass effect: Search your deck for an Element Stone and add it to your hand.
+static func execute_compass(deck: Array, hand: Array, chosen_stone: CardData = null) -> Dictionary:
+	# Compass effect: Search your deck for an Element Stone and add it to your hand, then shuffle deck.
 	var found_stone: CardData = null
-	for c in deck:
-		if c is CardData and c.card_type == "stone":
-			found_stone = c
-			break
+	if chosen_stone and deck.has(chosen_stone) and chosen_stone.card_type == "stone":
+		found_stone = chosen_stone
+	else:
+		for c in deck:
+			if c is CardData and c.card_type == "stone":
+				found_stone = c
+				break
 			
 	if found_stone:
 		deck.erase(found_stone)
+		deck.shuffle()
 		hand.append(found_stone)
 		return {
 			"success": true, 
 			"card": found_stone,
-			"details": "Added " + found_stone.name + " from deck to hand."
+			"details": "Searched deck, added " + found_stone.name + " to hand, and shuffled deck."
 		}
 	else:
 		return {
 			"success": false, 
 			"card": null,
 			"details": "No Element Stone found in deck."
+		}
+
+static func execute_draconic_tome(deck: Array, hand: Array, chosen_dragon: CardData = null) -> Dictionary:
+	# Draconic Tome effect: Search your deck for any Dragon Beast card, add to hand, then shuffle deck.
+	var found_dragon: CardData = null
+	if chosen_dragon and deck.has(chosen_dragon) and chosen_dragon.card_type == "beast":
+		found_dragon = chosen_dragon
+	else:
+		for c in deck:
+			if c is CardData and c.card_type == "beast":
+				found_dragon = c
+				break
+				
+	if found_dragon:
+		deck.erase(found_dragon)
+		deck.shuffle()
+		hand.append(found_dragon)
+		return {
+			"success": true,
+			"card": found_dragon,
+			"details": "Searched deck, added " + found_dragon.name + " to hand, and shuffled deck."
+		}
+	else:
+		return {
+			"success": false,
+			"card": null,
+			"details": "No Dragon Beast card found in deck."
 		}
