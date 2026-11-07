@@ -7,6 +7,7 @@ var current_filter: String = "all"
 var use_legacy: bool = false
 
 @onready var grid_container: GridContainer = $ScrollContainer/GridContainer
+@onready var open_packs_button: Button = $TopBar/OpenPacksButton
 @onready var filter_option: OptionButton = $TopBar/FilterOption
 @onready var legacy_toggle: CheckButton = $TopBar/LegacyToggle
 @onready var back_button: Button = $TopBar/BackButton
@@ -23,6 +24,8 @@ func _ready() -> void:
 	card_db = CardData.load_database()
 	
 	back_button.pressed.connect(_on_back_pressed)
+	if open_packs_button:
+		open_packs_button.pressed.connect(_on_open_packs_pressed)
 	legacy_toggle.toggled.connect(_on_legacy_toggled)
 	filter_option.item_selected.connect(_on_filter_selected)
 	
@@ -120,6 +123,10 @@ func _on_legacy_toggled(toggled: bool) -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 	use_legacy = toggled
 	populate_cards()
+
+func _on_open_packs_pressed() -> void:
+	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+	get_tree().change_scene_to_file("res://scenes/pack_opening.tscn")
 
 func _on_back_pressed() -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
