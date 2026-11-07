@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://cxkjv38pm15y"]
 
 [ext_resource type="Script" path="res://scripts/ui/battle_controller.gd" id="1_battle"]
-[ext_resource type="Texture2D" path="res://assets/art/playmat_arena.jpg" id="2_playmat"]
+[ext_resource type="Script" path="res://scripts/ui/procedural_playmat.gd" id="2_playmat"]
 [ext_resource type="Texture2D" path="res://assets/art/card_back.png" id="3_cardback"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
@@ -25,18 +25,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_battle")
 
-[node name="PlaymatBackground" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("2_playmat")
-expand_mode = 1
-stretch_mode = 6
-
-[node name="DarkVignette" type="ColorRect" parent="."]
+[node name="PlaymatBackground" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -44,7 +33,18 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.02, 0.03, 0.05, 0.4)
+script = ExtResource("2_playmat")
+
+[node name="DarkVignette" type="ColorRect" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.03, 0.05, 0.2)
 
 [node name="Board" type="Control" parent="."]
 layout_mode = 1

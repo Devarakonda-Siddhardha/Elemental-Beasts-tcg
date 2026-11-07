@@ -64,6 +64,7 @@ func run_all_tests() -> void:
 	test_21_transcendence_from_hand_with_5_stones()
 	test_22_ascension_from_hand_with_3_stones_each()
 	test_23_god_dragon_ritual_from_hand_and_one_per_duel()
+	test_24_procedural_playmat_generation()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -496,3 +497,21 @@ func test_23_god_dragon_ritual_from_hand_and_one_per_duel() -> void:
 	state.player_hands[0] = [state.card_db["god_dragon"]]
 	var second_res = state.summon_god_dragon(0, 0)
 	assert_true(not second_res.success, "Requirement 23c: God Dragon cannot be summoned more than once per player per duel")
+
+func test_24_procedural_playmat_generation() -> void:
+	# 1. Instantiate ProceduralPlaymat directly
+	var playmat = ProceduralPlaymat.new()
+	playmat.size = Vector2(1920, 1080)
+	playmat._ready()
+	
+	assert_true(playmat._noise_texture != null, "Requirement 24a: Procedural playmat synthesizes FastNoiseLite surface texture at runtime")
+	
+	# Verify battle scene instantiates cleanly with procedural playmat
+	var battle_scene = load("res://scenes/battle.tscn")
+	assert_true(battle_scene != null, "Requirement 24b: Battle scene loads without missing texture dependencies")
+	
+	var battle_instance = battle_scene.instantiate()
+	var bg_node = battle_instance.get_node_or_null("PlaymatBackground")
+	assert_true(bg_node is ProceduralPlaymat, "Requirement 24c: PlaymatBackground in battle scene is a ProceduralPlaymat node (zero static image dependencies)")
+	battle_instance.free()
+	playmat.free()
