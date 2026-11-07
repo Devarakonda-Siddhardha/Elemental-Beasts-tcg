@@ -46,7 +46,11 @@ var hover_zoom: bool = true
 func _ready() -> void:
 	custom_minimum_size = Vector2(200, 278)
 	size = Vector2(200, 278)
-	pivot_offset = size / 2.0
+	if base_scale == Vector2.ONE:
+		pivot_offset = size / 2.0
+	else:
+		pivot_offset = Vector2.ZERO
+		scale = base_scale
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 	gui_input.connect(_on_gui_input)
@@ -105,13 +109,13 @@ func setup_from_beast(beast_inst) -> void:
 func _get_element_symbol(el: String) -> String:
 	var clean_el = el.to_lower().replace("_dragon", "").strip_edges()
 	match clean_el:
-		"fire": return "🔥"
+		"fire": return "☀"
 		"lightning": return "⚡"
-		"wind": return "🌪️"
-		"ice": return "❄️"
-		"shadow": return "🌑"
-		"mechanical": return "⚙️"
-		"water": return "💧"
+		"wind": return "❖"
+		"ice": return "❄"
+		"shadow": return "☾"
+		"mechanical": return "⚙"
+		"water": return "◈"
 		"neutral": return "✦"
 		_:
 			if "_" in clean_el:
@@ -127,39 +131,39 @@ func _get_symbolic_effect_text() -> String:
 		return "+1  " + _get_element_symbol(card_data.element) + "  " + card_data.element.capitalize() + " Stone"
 
 	match card_data.id:
-		"inferno_surge": return "⚔️ 5 to Beast  |  ⚔️ 4 to Player"
-		"lightning_strike": return "⚔️ 4 Direct Damage"
-		"zephyr_gust": return "⚔️ 3 Damage  •  🃏 +1 Card"
-		"glacial_freeze": return "⚔️ 2 Damage  •  ❄️ Freeze (1T)"
-		"abyssal_drain": return "⚔️ 3 Damage  •  ❤️ +3 Life"
-		"kinetic_overdrive": return "⚔️ +2 ATK  •  🛡️ +4 Shield"
-		"tidal_surge": return "✨ Cleanse  •  ❤️ +6 HP"
-		"compass": return "🔍 Search Deck ➔ +1 💎 Stone"
-		"dragon_elixir": return "❤️ +5 HP to Beast"
-		"elemental_shield": return "🛡️ +4 Shield HP"
-		"little_dragon": return "🌱 Evolves into any Elemental Dragon (2× 💎)"
-		"shadow_dragon": return "🛡️ Spell Immune"
-		"wind_dragon": return "💎 -1 ➔ ⚔️×2 this turn"
-		"fire_dragon": return "🔥💎 -1 ➔ ⚔️ 4 Direct Damage"
-		"lightning_dragon": return "⚡💎 -1 ➔ ⚔️ 2 to All Foes"
-		"ice_dragon": return "❄️💎 -1 ➔ ❄️ Freeze (1T)"
-		"mechanical_dragon": return "⚙️💎 -1 ➔ ⚔️ +3 ATK (1T)"
-		"water_dragon": return "💧💎 -1 ➔ ❤️ +5 HP"
-		"volcovolt_dragon": return "🔥⚡💎 -1 each ➔ ⚔️ 8 (×2) + ⚡ Stun (1T)"
-		"spark_wraith_dragon": return "🌑⚡💎 -1 each ➔ 🃏 Recover 2 Spells (⚡ Free)"
-		"techno_frost_dragon": return "❄️⚙️💎 -1 each ➔ ❄️ Freeze All + 🃏 Draw per Frozen"
-		"zephyr_shadow_dragon": return "🌑🌪️💎 -1 each ➔ ⚔️×2 Direct to Player"
-		"transcendent_shadow_dragon": return "🛡️ Spell Immune  •  ⚔️ Direct Pierce"
-		"transcendent_fire_dragon": return "🔥💎 -2 ➔ ⚔️ 6 to All Foes"
-		"transcendent_wind_dragon": return "🌪️💎 -1 ➔ ⚔️×3 this turn"
-		"transcendent_lightning_dragon": return "⚔️ Hits apply ⚡ Stun (1T)"
-		"transcendent_ice_dragon": return "❄️ Freeze (1T) attackers on hit"
-		"transcendent_mechanical_dragon": return "🛡️ -3 Damage Taken"
-		"ascended_volcovolt_dragon": return "🔥⚡💎 -2 each ➔ ⚔️ 12 (×2) + ⚡ Stun (1T)"
-		"ascended_spark_wraith_dragon": return "🌑⚡💎 -2 each ➔ 🃏 Recover All Spells (⚡🌑 Free)"
-		"ascended_techno_frost_dragon": return "❄️⚙️💎 -2 each ➔ ❄️ Freeze All + 🃏 +2 per Frozen"
-		"ascended_zephyr_shadow_dragon": return "🌑🌪️💎 -2 each ➔ ⚔️ 10 Split + Direct Strike"
-		"god_dragon": return "🌀 Banish All Foes  •  ⚔️ 10 Direct Damage"
+		"inferno_surge": return "⚔ 5 to Beast  |  ⚔ 4 to Player"
+		"lightning_strike": return "⚔ 4 Direct Damage"
+		"zephyr_gust": return "⚔ 3 Damage  •  ❖ +1 Card"
+		"glacial_freeze": return "⚔ 2 Damage  •  ❄ Freeze (1T)"
+		"abyssal_drain": return "⚔ 3 Damage  •  ♥ +3 Life"
+		"kinetic_overdrive": return "⚔ +2 ATK  •  ❖ +4 Shield"
+		"tidal_surge": return "✨ Cleanse  •  ♥ +6 HP"
+		"compass": return "✦ Search Deck ➔ +1 ◈ Stone"
+		"dragon_elixir": return "♥ +5 HP to Beast"
+		"elemental_shield": return "❖ +4 Shield HP"
+		"little_dragon": return "Evolve into any Elemental Dragon (2× ◈)"
+		"shadow_dragon": return "☾ Spell Immune"
+		"wind_dragon": return "◈ -1 ➔ +1 ⚔×2 this turn"
+		"fire_dragon": return "☀◈ -1 ➔ ⚔ 4 Direct Damage"
+		"lightning_dragon": return "⚡◈ -1 ➔ ⚔ 2 to All Foes"
+		"ice_dragon": return "❄◈ -1 ➔ ❄ Freeze 1 enemy"
+		"mechanical_dragon": return "⚙◈ -1 ➔ ⚔ +3 ATK (1T)"
+		"water_dragon": return "◈ -1 ➔ ♥ +5 HP"
+		"volcovolt_dragon": return "☀⚡◈ -1 each ➔ ⚔ 8 (×2) + ⚡ Stun"
+		"spark_wraith_dragon": return "☾⚡◈ -1 each ➔ ❖ Recover 2 Spells"
+		"techno_frost_dragon": return "❄⚙◈ -1 each ➔ ❄ Freeze All + Draw"
+		"zephyr_shadow_dragon": return "☾❖◈ -1 each ➔ ⚔×2 Direct Strike"
+		"transcendent_shadow_dragon": return "☾ Spell Immune  •  ⚔ Direct Pierce"
+		"transcendent_fire_dragon": return "☀◈ -2 ➔ ⚔ 6 to All Foes"
+		"transcendent_wind_dragon": return "❖◈ -1 ➔ ⚔×3 this turn"
+		"transcendent_lightning_dragon": return "⚔ Hits apply ⚡ Stun (1T)"
+		"transcendent_ice_dragon": return "❄ Freeze (1T) attackers on hit"
+		"transcendent_mechanical_dragon": return "❖ -3 Damage Taken"
+		"ascended_volcovolt_dragon": return "☀⚡◈ -2 each ➔ ⚔ 12 (×2) + ⚡ Stun"
+		"ascended_spark_wraith_dragon": return "☾⚡◈ -2 each ➔ ❖ Recover All Spells"
+		"ascended_techno_frost_dragon": return "❄⚙◈ -2 each ➔ ❄ Freeze All + Draw 2"
+		"ascended_zephyr_shadow_dragon": return "☾❖◈ -2 each ➔ ⚔ 10 Split + Direct"
+		"god_dragon": return "✦ Banish All Foes  •  ⚔ 10 Direct"
 
 	var raw_desc = ""
 	if card_data.ability and not card_data.ability.is_empty():
@@ -168,16 +172,16 @@ func _get_symbolic_effect_text() -> String:
 		raw_desc = card_data.description
 
 	var text = raw_desc
-	text = text.replace("Immune to all Spell cards.", "🛡️ Spell Immune")
-	text = text.replace("Immune to all Spell cards", "🛡️ Spell Immune")
-	text = text.replace("Discard 1 ", "💎 -1 ➔ ")
-	text = text.replace("Spend 1 ", "💎 -1 ➔ ")
-	text = text.replace("attack twice", "⚔️×2")
+	text = text.replace("Immune to all Spell cards.", "☾ Spell Immune")
+	text = text.replace("Immune to all Spell cards", "☾ Spell Immune")
+	text = text.replace("Discard 1 ", "◈ -1 ➔ ")
+	text = text.replace("Spend 1 ", "◈ -1 ➔ ")
+	text = text.replace("attack twice", "⚔×2")
 	text = text.replace("Applies Stun", "⚡ Stun (1T)")
 	text = text.replace("apply Stun", "⚡ Stun (1T)")
-	text = text.replace("Freeze", "❄️ Freeze (1T)")
-	text = text.replace("damage", "⚔️")
-	text = text.replace("HP", "❤️")
+	text = text.replace("Freeze", "❄ Freeze (1T)")
+	text = text.replace("damage", "⚔")
+	text = text.replace("HP", "♥")
 	return text
 
 func update_ui() -> void:
@@ -277,27 +281,27 @@ func update_ui() -> void:
 		
 	# 9. Footer Badge (Symbolic Evolution / Transcendence / Fusion / Ascension / God info)
 	if card_data.id == "god_dragon":
-		footer_label.text = "👑 🔥⚡🌪️❄️🌑⚙️"
+		footer_label.text = "✦ ☀⚡❖❄☾⚙"
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 45, 233, 155, 251)
 	elif card_data.sub_type == "ascended_dragon" and card_data.fusion_materials.size() >= 2:
 		var m1 = card_data.fusion_materials[0]
 		var m2 = card_data.fusion_materials[1]
-		footer_label.text = "👑 3×" + _get_element_symbol(m1) + " + 3×" + _get_element_symbol(m2)
+		footer_label.text = "✦ 3×" + _get_element_symbol(m1) + " + 3×" + _get_element_symbol(m2)
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 45, 233, 155, 251)
 	elif card_data.sub_type == "fusion_dragon" and card_data.fusion_materials.size() >= 2:
 		var m1 = card_data.fusion_materials[0]
 		var m2 = card_data.fusion_materials[1]
-		footer_label.text = "🔗 " + _get_element_symbol(m1) + " + " + _get_element_symbol(m2)
+		footer_label.text = "❖ " + _get_element_symbol(m1) + " + " + _get_element_symbol(m2)
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 55, 233, 145, 251)
 	elif card_data.sub_type == "transcendent_dragon":
-		footer_label.text = "⭐ 5× " + _get_element_symbol(card_data.element)
+		footer_label.text = "★ 5× " + _get_element_symbol(card_data.element)
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 55, 233, 145, 251)
 	elif card_data.evolution_stage == 1:
-		footer_label.text = "🌱 ➔ 2× " + _get_element_symbol(card_data.element)
+		footer_label.text = "✦ ➔ 2× " + _get_element_symbol(card_data.element)
 		$FooterBadge.visible = true
 		_set_rect($FooterBadge, 55, 233, 145, 251)
 	else:
