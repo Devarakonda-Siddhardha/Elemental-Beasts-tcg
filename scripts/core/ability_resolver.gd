@@ -222,6 +222,64 @@ static func execute_beast_ability(
 					frozen_all += 1
 			beast.heal(4)
 			result_info["details"] = "Umbral Permafrost froze " + str(frozen_all) + " foe(s) and restored 4 HP!"
+
+		"magma_eruption":
+			# Magma Drake: Deal 3 damage to all opposing Beasts
+			var m_hits = 0
+			for eb in all_enemy_beasts:
+				if eb is BeastInstance and not eb.is_dead():
+					eb.take_damage(3)
+					m_hits += 1
+			result_info["details"] = "Magma Eruption scorched " + str(m_hits) + " enemy beast(s) for 3 damage!"
+
+		"storm_dive":
+			# Thunderbird Wyvern: Deal 3 damage and apply Stun (1 turn)
+			var s_target: BeastInstance = null
+			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:
+				s_target = target_enemy_beasts[0]
+			elif all_enemy_beasts.size() > 0 and all_enemy_beasts[0] is BeastInstance:
+				s_target = all_enemy_beasts[0]
+			if s_target:
+				s_target.take_damage(3)
+				s_target.stun_turns = maxi(s_target.stun_turns, RulesConfig.DEFAULT_STUN_DURATION)
+			result_info["details"] = "Storm Dive dealt 3 damage and stunned target!"
+
+		"whirlwind_draw":
+			# Cyclone Serpent: Draw 1 card and gain +2 Attack
+			beast.bonus_attack += 2
+			if deck.size() > 0:
+				hand.append(deck.pop_front())
+			result_info["details"] = "Whirlwind Rush drew 1 card and boosted +2 Attack!"
+
+		"subzero_bite":
+			# Frostfang Wyrm: Deal 3 damage and Freeze target
+			var f_target: BeastInstance = null
+			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:
+				f_target = target_enemy_beasts[0]
+			elif all_enemy_beasts.size() > 0 and all_enemy_beasts[0] is BeastInstance:
+				f_target = all_enemy_beasts[0]
+			if f_target:
+				f_target.take_damage(3)
+				f_target.freeze_turns = maxi(f_target.freeze_turns, RulesConfig.DEFAULT_FREEZE_DURATION)
+			result_info["details"] = "Subzero Bite dealt 3 damage and froze target!"
+
+		"shadow_siphon":
+			# Nightmare Stalker: Deal 3 damage and heal self 3 HP
+			var n_target: BeastInstance = null
+			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:
+				n_target = target_enemy_beasts[0]
+			elif all_enemy_beasts.size() > 0 and all_enemy_beasts[0] is BeastInstance:
+				n_target = all_enemy_beasts[0]
+			if n_target:
+				n_target.take_damage(3)
+			beast.heal(3)
+			result_info["details"] = "Shadow Siphon drained 3 HP from target!"
+
+		"aegis_fortress":
+			# Aegis Automaton Dragon: Gain +5 Shield HP and +2 Attack
+			beast.shield_hp += 5
+			beast.bonus_attack += 2
+			result_info["details"] = "Aegis Fortress granted +5 Shield HP and +2 Attack!"
 			
 		_:
 			result_info["details"] = "Ability activated."

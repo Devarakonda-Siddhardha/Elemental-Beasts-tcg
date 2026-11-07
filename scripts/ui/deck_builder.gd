@@ -309,6 +309,9 @@ func _matches_catalog_filters(card: CardData) -> bool:
 			"fusion":
 				if card.sub_type != "fusion_dragon":
 					return false
+			"realm":
+				if card.card_type != "realm":
+					return false
 			"spell":
 				if card.card_type != "spell":
 					return false

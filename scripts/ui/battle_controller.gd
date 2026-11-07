@@ -220,6 +220,46 @@ func update_hud() -> void:
 		active_player_label.modulate = Color(1.0, 0.4, 0.4)
 		end_turn_button.disabled = is_vs_ai
 
+	_update_realm_banner()
+
+func _update_realm_banner() -> void:
+	var r_badge: Button = get_node_or_null("ActiveRealmBadge")
+	if not r_badge:
+		r_badge = Button.new()
+		r_badge.name = "ActiveRealmBadge"
+		r_badge.position = Vector2(18, 250)
+		r_badge.custom_minimum_size = Vector2(190, 48)
+		r_badge.add_theme_font_size_override("font_size", 11)
+		r_badge.pressed.connect(func():
+			if game_state.active_realm != null:
+				var temp_ui: CardUI = card_ui_prefab.instantiate()
+				temp_ui.card_data = game_state.active_realm
+				_on_any_card_hovered(temp_ui, true)
+				temp_ui.queue_free()
+		)
+		add_child(r_badge)
+
+	var sb = StyleBoxFlat.new()
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(2)
+	if game_state.active_realm != null:
+		var r_el = game_state.active_realm.element.to_lower()
+		var col: Color = ELEMENT_UI_COLORS.get(r_el, Color(0.95, 0.78, 0.28))
+		sb.bg_color = Color(0.08, 0.07, 0.16, 0.96)
+		sb.border_color = col
+		r_badge.text = "❖ REALM: " + game_state.active_realm.name.to_upper() + "\n(Evolutions: -1 ◈ Stone)"
+		r_badge.add_theme_color_override("font_color", col.lightened(0.3))
+		r_badge.tooltip_text = game_state.active_realm.description
+	else:
+		sb.bg_color = Color(0.05, 0.05, 0.10, 0.75)
+		sb.border_color = Color(0.35, 0.35, 0.45, 0.65)
+		r_badge.text = "❖ NO ACTIVE REALM\n(Play a Realm Card)"
+		r_badge.add_theme_color_override("font_color", Color(0.65, 0.65, 0.72))
+		r_badge.tooltip_text = "Play a Realm Location card to reduce Dragon Evolution stone requirements by 1!"
+	r_badge.add_theme_stylebox_override("normal", sb)
+	r_badge.add_theme_stylebox_override("hover", sb)
+	r_badge.add_theme_stylebox_override("pressed", sb)
+
 func refresh_stones_display(player_id: int, container: HBoxContainer) -> void:
 	for child in container.get_children():
 		child.queue_free()
@@ -325,11 +365,13 @@ func refresh_player_hand() -> void:
 		if game_state.active_player_id == 0:
 			if card.card_type == "stone" and stone_mgr.can_place_stone():
 				playable = true
+			elif card.card_type == "realm" and mana_mgr.can_spend(card.mana_cost):
+				playable = true
 			elif card.id == "little_dragon" and mana_mgr.can_spend(2) and field.size() < 4:
 				playable = true
 			elif card.evolution_stage == 1:
 				for b in field:
-					if EvolutionEngine.can_evolve(b, card, stone_mgr).valid:
+					if EvolutionEngine.can_evolve(b, card, stone_mgr, game_state.active_realm).valid:
 						playable = true
 						break
 			elif card.sub_type == "fusion_dragon":
@@ -401,15 +443,29 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		
 	var card = card_ui.card_data
 	
-	# If Stone card -> place directly
+	# If Stone card -> place directly (unlimited stone cards per turn)
 	if card.card_type == "stone":
 		if game_state.play_stone_from_hand(0, hand_index):
 			if has_node("/root/SoundManager"):
 				get_node("/root/SoundManager").play_stone_place()
-			log_message("  💎 Placed [b]" + card.name + "[/b]")
+			log_message("  ◈ Placed [b]" + card.name + "[/b]")
+			refresh_full_ui()
+		return
+
+	# If Realm / Location card -> place directly in active Realm slot (replaces any previous Realm)
+	if card.card_type == "realm":
+		var r_res = game_state.play_realm(0, hand_index)
+		if r_res.success:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+				get_node("/root/SoundManager").play_mana_spend()
+			if r_res.replaced_realm != null:
+				log_message("  ❖ Realm [b]" + card.name + "[/b] replaced [b]" + r_res.replaced_realm.name + "[/b]! (Evolutions: -1 ◈)")
+			else:
+				log_message("  ❖ Activated Realm [b]" + card.name + "[/b]! (Evolutions: -1 ◈)")
 			refresh_full_ui()
 		else:
-			log_message("[color=#e76f51]  ⚠️ Limit 1 Stone/turn[/color]")
+			log_message("[color=#e76f51]  ⚠️ " + r_res.error + "[/color]")
 		return
 		
 	# If Little Dragon -> summon directly
@@ -498,8 +554,11 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		var fused = game_state.fuse_beasts(0, hand_index)
 		if fused:
 			if has_node("/root/SoundManager"):
-				get_node("/root/SoundManager").play_fusion()
-				get_node("/root/SoundManager").play_stone_spend()
+				var sm = get_node("/root/SoundManager")
+				sm.play_fusion()
+				sm.play_stone_spend()
+				if sm.has_method("play_voice"):
+					sm.play_voice("vo_fusion")
 			log_message("  ✨ Fused into [b]" + fused.card_data.name + "[/b]")
 			refresh_full_ui()
 		else:
@@ -527,8 +586,11 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		var res = game_state.summon_god_dragon(0, hand_index)
 		if res.success:
 			if has_node("/root/SoundManager"):
-				get_node("/root/SoundManager").play_fusion()
-				get_node("/root/SoundManager").play_victory()
+				var sm = get_node("/root/SoundManager")
+				sm.play_fusion()
+				sm.play_victory()
+				if sm.has_method("play_voice"):
+					sm.play_voice("vo_god_dragon")
 			log_message("  ✨ [b]God Dragon[/b] descended!")
 			refresh_full_ui()
 		else:
@@ -554,8 +616,11 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 			var success = game_state.evolve_beast(0, field_index, h_idx)
 			if success:
 				if has_node("/root/SoundManager"):
-					get_node("/root/SoundManager").play_evolution()
-					get_node("/root/SoundManager").play_stone_spend()
+					var sm = get_node("/root/SoundManager")
+					sm.play_evolution()
+					sm.play_stone_spend()
+					if sm.has_method("play_voice"):
+						sm.play_voice("vo_evolution")
 				log_message("  ✨ Evolved into [b]" + beast.card_data.name + "[/b]")
 			else:
 				log_message("[color=#e76f51]  ⚠️ Evolution failed[/color]")
@@ -570,8 +635,11 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 			var res_beast = game_state.transcend_beast(0, field_index, h_idx)
 			if res_beast:
 				if has_node("/root/SoundManager"):
-					get_node("/root/SoundManager").play_evolution()
-					get_node("/root/SoundManager").play_stone_spend()
+					var sm = get_node("/root/SoundManager")
+					sm.play_evolution()
+					sm.play_stone_spend()
+					if sm.has_method("play_voice"):
+						sm.play_voice("vo_transcendence")
 				log_message("  ✨ Transcended into [b]" + res_beast.card_data.name + "[/b]")
 			else:
 				log_message("[color=#e76f51]  ⚠️ Transcendence failed[/color]")
@@ -586,8 +654,11 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 			var res_beast = game_state.ascend_beast(0, field_index, h_idx)
 			if res_beast:
 				if has_node("/root/SoundManager"):
-					get_node("/root/SoundManager").play_fusion()
-					get_node("/root/SoundManager").play_stone_spend()
+					var sm = get_node("/root/SoundManager")
+					sm.play_fusion()
+					sm.play_stone_spend()
+					if sm.has_method("play_voice"):
+						sm.play_voice("vo_ascension")
 				log_message("  ✨ Ascended into [b]" + res_beast.card_data.name + "[/b]")
 			else:
 				log_message("[color=#e76f51]  ⚠️ Ascension failed[/color]")
@@ -673,8 +744,11 @@ func _on_opponent_panel_input(event: InputEvent) -> void:
 			var res = game_state.attack_player_direct(attacker)
 			if res.success:
 				if has_node("/root/SoundManager"):
-					get_node("/root/SoundManager").play_attack()
-					get_node("/root/SoundManager").play_damage()
+					var sm = get_node("/root/SoundManager")
+					sm.play_attack()
+					sm.play_damage()
+					if not game_state.is_game_over and sm.has_method("play_voice"):
+						sm.play_voice("vo_direct_attack")
 				log_message("  ⚔️ [b]" + res.get("attacker_name", attacker.card_data.name) + "[/b] ➔ " + str(res.get("damage_dealt", attacker.get_attack())) + " dmg")
 			else:
 				log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
@@ -721,8 +795,11 @@ func _on_end_turn_pressed() -> void:
 
 func _on_turn_started(turn: int, player_id: int) -> void:
 	if has_node("/root/SoundManager"):
-		get_node("/root/SoundManager").play_turn_change()
-		get_node("/root/SoundManager").play_mana_refresh()
+		var sm = get_node("/root/SoundManager")
+		sm.play_turn_change()
+		sm.play_mana_refresh()
+		if turn > 1 and sm.has_method("play_voice"):
+			sm.play_voice("vo_your_turn" if player_id == 0 else "vo_enemy_turn")
 	log_message("[color=#7bdff2]◆ Turn " + str(turn) + " — " + ("You" if player_id == 0 else "Opponent") + "[/color]")
 	update_hud()
 
@@ -747,10 +824,15 @@ func _on_combat_resolved(res: Dictionary) -> void:
 
 func _on_game_ended(winner: int, reason: String) -> void:
 	if has_node("/root/SoundManager"):
+		var sm = get_node("/root/SoundManager")
 		if winner == 0:
-			get_node("/root/SoundManager").play_victory()
+			sm.play_victory()
+			if sm.has_method("play_voice"):
+				sm.play_voice("vo_victory")
 		else:
-			get_node("/root/SoundManager").play_defeat()
+			sm.play_defeat()
+			if sm.has_method("play_voice"):
+				sm.play_voice("vo_defeat")
 	var msg = "[b][color=#e63946]GAME OVER! Player " + str(winner + 1) + " WINS! (" + reason + ")[/color][/b]"
 	log_message(msg)
 	prompt_banner.text = "GAME OVER! Player " + str(winner + 1) + " WINS!"
@@ -812,7 +894,11 @@ func play_deck_shuffle_animation(player_id: int) -> void:
 		tw.parallel().tween_property(sp, "rotation_degrees", 0.0, 0.14)
 
 	if has_node("/root/SoundManager"):
-		get_node("/root/SoundManager").play_card_hover()
+		var sm = get_node("/root/SoundManager")
+		if sm.has_method("play_deck_shuffle"):
+			sm.play_deck_shuffle()
+		else:
+			sm.play_card_hover()
 
 	var clean_tw = create_tween()
 	clean_tw.tween_interval(0.68)
@@ -942,6 +1028,11 @@ func _show_start_of_match_coin_flip(player_deck: Array, ai_deck: Array) -> void:
 	if has_node("CoinFlipOverlay"):
 		get_node("CoinFlipOverlay").queue_free()
 
+	if has_node("/root/SoundManager"):
+		var sm = get_node("/root/SoundManager")
+		if sm.has_method("play_voice"):
+			sm.play_voice("vo_coin_toss")
+
 	var overlay = ColorRect.new()
 	overlay.name = "CoinFlipOverlay"
 	overlay.color = Color(0.02, 0.02, 0.06, 0.90)
@@ -1023,7 +1114,11 @@ func _show_start_of_match_coin_flip(player_deck: Array, ai_deck: Array) -> void:
 	toss_btn.pressed.connect(func():
 		toss_btn.disabled = true
 		if has_node("/root/SoundManager"):
-			get_node("/root/SoundManager").play_fusion()
+			var sm = get_node("/root/SoundManager")
+			if sm.has_method("play_coin_flip"):
+				sm.play_coin_flip()
+			else:
+				sm.play_fusion()
 		var player_wins_toss: bool = (randi() % 2 == 0)
 		var total_half_turns = 8 if player_wins_toss else 9
 		status_lbl.text = "Tossing Elemental Coin..."
@@ -1046,12 +1141,16 @@ func _show_start_of_match_coin_flip(player_deck: Array, ai_deck: Array) -> void:
 				status_lbl.add_theme_color_override("font_color", Color(0.35, 1.0, 0.50))
 				log_message("[color=#52b788]◆ Coin Toss: HEADS (Solar Crest) — You take Turn 1![/color]")
 				game_state.start_game(player_deck, ai_deck, 0)
+				if has_node("/root/SoundManager") and get_node("/root/SoundManager").has_method("play_voice"):
+					get_node("/root/SoundManager").play_voice("vo_heads_first")
 			else:
 				coin_tex.texture = tails_tex
 				status_lbl.text = "☾ TAILS — ABYSSAL SHADOW CREST! Opponent Goes First!"
 				status_lbl.add_theme_color_override("font_color", Color(0.82, 0.58, 1.0))
 				log_message("[color=#c77dff]◆ Coin Toss: TAILS (Abyssal Crest) — Opponent takes Turn 1![/color]")
 				game_state.start_game(player_deck, ai_deck, 1)
+				if has_node("/root/SoundManager") and get_node("/root/SoundManager").has_method("play_voice"):
+					get_node("/root/SoundManager").play_voice("vo_tails_second")
 			refresh_full_ui()
 			play_deck_shuffle_animation(0)
 			play_deck_shuffle_animation(1)

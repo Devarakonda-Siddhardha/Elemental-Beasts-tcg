@@ -570,7 +570,16 @@ static func get_template_path(element_name: String, ctype: String, subtype: Stri
 		if ResourceLoader.exists("res://assets/templates/template_stone.jpg"):
 			return "res://assets/templates/template_stone.jpg"
 
-	# 3. Spell Cards (Elemental spell storm templates)
+	# 3. Realm / Location Cards (Elemental Stadium templates with Mana Cost medallion)
+	if ctype == "realm":
+		var realm_path = "res://assets/templates/realm_" + element_name.to_lower() + ".png"
+		if ResourceLoader.exists(realm_path):
+			return realm_path
+		var fallback_el = "res://assets/templates/template_" + element_name.to_lower() + ".png"
+		if ResourceLoader.exists(fallback_el):
+			return fallback_el
+
+	# 4. Spell Cards (Elemental spell storm templates)
 	if ctype == "spell":
 		var spell_path = "res://assets/templates/spell_" + element_name.to_lower() + ".png"
 		if ResourceLoader.exists(spell_path):

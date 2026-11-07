@@ -252,6 +252,10 @@ func _reset_to_new_pack() -> void:
 
 	instruction_banner.text = "↔ Drag Left / Right to Rotate Pack (Front & Back)  •  ⚡ Click or Tear Top of Pack to Open!"
 	_update_pack_3d_visuals(0.0)
+	if has_node("/root/SoundManager"):
+		var sm = get_node("/root/SoundManager")
+		if sm.has_method("play_voice"):
+			sm.play_voice("vo_pack_open")
 
 func _tear_open_pack() -> void:
 	if state != PackState.INSPECTING_PACK:
@@ -265,9 +269,11 @@ func _tear_open_pack() -> void:
 	instruction_banner.text = "⚡ PRIMAL AWAKENING UNLEASHED! ⚡"
 	sub_status_label.text = "Unsealing elemental relics from the vault..."
 
-	# Procedural sound effects via SoundManager
+	# Sound effects via SoundManager
 	if has_node("/root/SoundManager"):
 		var sm = get_node("/root/SoundManager")
+		if sm.has_method("play_pack_rip"):
+			sm.play_pack_rip()
 		sm.play_fusion()
 		sm.play_evolution()
 		sm.play_card_play()

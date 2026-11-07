@@ -1009,6 +1009,370 @@
         "ice_dragon"
       ],
       "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "thunder_mountain",
+      "name": "Thunder Mountain",
+      "card_type": "realm",
+      "sub_type": "location_realm",
+      "element": "lightning",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Realm Location: Replaces any active Realm in play. While in play, all Dragon Evolutions require 1 fewer Element Stone (minimum 1).",
+      "ability": {
+        "name": "Storm Spire Resonance",
+        "description": "Reduces the Element Stone requirement of all Dragon Evolutions by 1 (minimum 1).",
+        "effect": "reduce_evolution_cost",
+        "stone_reduction": 1
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "inferno_caldera",
+      "name": "Inferno Caldera",
+      "card_type": "realm",
+      "sub_type": "location_realm",
+      "element": "fire",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Realm Location: Replaces any active Realm in play. While in play, all Dragon Evolutions require 1 fewer Element Stone (minimum 1).",
+      "ability": {
+        "name": "Volcanic Sanctuary",
+        "description": "Reduces the Element Stone requirement of all Dragon Evolutions by 1 (minimum 1).",
+        "effect": "reduce_evolution_cost",
+        "stone_reduction": 1
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "sky_tempest_sanctum",
+      "name": "Sky Tempest Sanctum",
+      "card_type": "realm",
+      "sub_type": "location_realm",
+      "element": "wind",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Realm Location: Replaces any active Realm in play. While in play, all Dragon Evolutions require 1 fewer Element Stone (minimum 1).",
+      "ability": {
+        "name": "Celestial Updraft",
+        "description": "Reduces the Element Stone requirement of all Dragon Evolutions by 1 (minimum 1).",
+        "effect": "reduce_evolution_cost",
+        "stone_reduction": 1
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "glacial_citadel",
+      "name": "Glacial Citadel",
+      "card_type": "realm",
+      "sub_type": "location_realm",
+      "element": "ice",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Realm Location: Replaces any active Realm in play. While in play, all Dragon Evolutions require 1 fewer Element Stone (minimum 1).",
+      "ability": {
+        "name": "Permafrost Spire",
+        "description": "Reduces the Element Stone requirement of all Dragon Evolutions by 1 (minimum 1).",
+        "effect": "reduce_evolution_cost",
+        "stone_reduction": 1
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "abyssal_void_realm",
+      "name": "Abyssal Void Realm",
+      "card_type": "realm",
+      "sub_type": "location_realm",
+      "element": "shadow",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Realm Location: Replaces any active Realm in play. While in play, all Dragon Evolutions require 1 fewer Element Stone (minimum 1).",
+      "ability": {
+        "name": "Eclipse Convergence",
+        "description": "Reduces the Element Stone requirement of all Dragon Evolutions by 1 (minimum 1).",
+        "effect": "reduce_evolution_cost",
+        "stone_reduction": 1
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "clockwork_foundry",
+      "name": "Clockwork Foundry",
+      "card_type": "realm",
+      "sub_type": "location_realm",
+      "element": "mechanical",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Realm Location: Replaces any active Realm in play. While in play, all Dragon Evolutions require 1 fewer Element Stone (minimum 1).",
+      "ability": {
+        "name": "Forge Assembly",
+        "description": "Reduces the Element Stone requirement of all Dragon Evolutions by 1 (minimum 1).",
+        "effect": "reduce_evolution_cost",
+        "stone_reduction": 1
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "magma_drake",
+      "name": "Magma Drake",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "fire",
+      "mana_cost": 0,
+      "stone_cost": {
+        "fire": 2
+      },
+      "hp": 15,
+      "max_hp": 15,
+      "attack": 8,
+      "ability": {
+        "name": "Magma Eruption",
+        "description": "Discard 1 Fire Stone from the Stone Pile: Deal 3 damage to all opposing Beasts.",
+        "cost": {
+          "fire": 1
+        },
+        "trigger": "activated",
+        "effect": "magma_eruption"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "thunderbird_wyvern",
+      "name": "Thunderbird Wyvern",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "lightning",
+      "mana_cost": 0,
+      "stone_cost": {
+        "lightning": 2
+      },
+      "hp": 15,
+      "max_hp": 15,
+      "attack": 6,
+      "ability": {
+        "name": "Storm Dive",
+        "description": "Discard 1 Lightning Stone from the Stone Pile: Deal 3 damage to target opposing Beast and apply Stun for 1 turn.",
+        "cost": {
+          "lightning": 1
+        },
+        "trigger": "activated",
+        "effect": "storm_dive"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "cyclone_serpent",
+      "name": "Cyclone Serpent",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "wind",
+      "mana_cost": 0,
+      "stone_cost": {
+        "wind": 2
+      },
+      "hp": 15,
+      "max_hp": 15,
+      "attack": 6,
+      "ability": {
+        "name": "Whirlwind Rush",
+        "description": "Discard 1 Wind Stone from the Stone Pile: Draw 1 card and gain +2 Attack.",
+        "cost": {
+          "wind": 1
+        },
+        "trigger": "activated",
+        "effect": "whirlwind_draw"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "frostfang_wyrm",
+      "name": "Frostfang Wyrm",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "ice",
+      "mana_cost": 0,
+      "stone_cost": {
+        "ice": 2
+      },
+      "hp": 16,
+      "max_hp": 16,
+      "attack": 6,
+      "ability": {
+        "name": "Subzero Bite",
+        "description": "Discard 1 Ice Stone from the Stone Pile: Deal 3 damage to target opposing Beast and Freeze it for 1 turn.",
+        "cost": {
+          "ice": 1
+        },
+        "trigger": "activated",
+        "effect": "subzero_bite"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "nightmare_stalker",
+      "name": "Nightmare Stalker",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "shadow",
+      "mana_cost": 0,
+      "stone_cost": {
+        "shadow": 2
+      },
+      "hp": 14,
+      "max_hp": 14,
+      "attack": 7,
+      "ability": {
+        "name": "Shadow Siphon",
+        "description": "Discard 1 Shadow Stone from the Stone Pile: Deal 3 damage to target opposing Beast and restore 3 HP to this dragon.",
+        "cost": {
+          "shadow": 1
+        },
+        "trigger": "activated",
+        "effect": "shadow_siphon"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "aegis_automaton_dragon",
+      "name": "Aegis Automaton Dragon",
+      "card_type": "beast",
+      "sub_type": "elemental_dragon",
+      "element": "mechanical",
+      "mana_cost": 0,
+      "stone_cost": {
+        "mechanical": 2
+      },
+      "hp": 18,
+      "max_hp": 18,
+      "attack": 5,
+      "ability": {
+        "name": "Aegis Fortress",
+        "description": "Discard 1 Mechanical Stone from the Stone Pile: Gain +5 Shield HP and +2 Attack.",
+        "cost": {
+          "mechanical": 1
+        },
+        "trigger": "activated",
+        "effect": "aegis_fortress"
+      },
+      "evolution_stage": 1,
+      "evolves_from": "little_dragon",
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "molten_meteor",
+      "name": "Molten Meteor",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "fire",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Call down a volcanic meteor shower. Deal 3 damage to all opposing Beasts and 2 damage to the opposing Player. (Fire Spell)",
+      "ability": {
+        "name": "Molten Meteor",
+        "effect": "molten_meteor",
+        "damage": 3,
+        "player_damage": 2,
+        "spell_element": "fire"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "chain_thunderbolt",
+      "name": "Chain Thunderbolt",
+      "card_type": "spell",
+      "sub_type": "control_spell",
+      "element": "lightning",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Strike with high-voltage lightning. Deal 3 damage to target opposing Beast and apply Stun for 1 turn. (Lightning Spell)",
+      "ability": {
+        "name": "Chain Thunderbolt",
+        "effect": "stun_strike",
+        "damage": 3,
+        "stun_turns": 1,
+        "spell_element": "lightning"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "tailwind_blessing",
+      "name": "Tailwind Blessing",
+      "card_type": "spell",
+      "sub_type": "buff_spell",
+      "element": "wind",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Empower your dragon with a surging gale. Target friendly Beast gains +3 Attack and you draw 1 card. (Wind Spell)",
+      "ability": {
+        "name": "Tailwind Blessing",
+        "effect": "tailwind_blessing",
+        "attack_buff": 3,
+        "spell_element": "wind"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "permafrost_shatter",
+      "name": "Permafrost Shatter",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "ice",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Shatter frozen armor with piercing icicles. Deal 3 damage to target opposing Beast (or 6 damage if the target is Frozen). (Ice Spell)",
+      "ability": {
+        "name": "Permafrost Shatter",
+        "effect": "permafrost_shatter",
+        "damage": 3,
+        "frozen_damage": 6,
+        "spell_element": "ice"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "umbral_hex",
+      "name": "Umbral Hex",
+      "card_type": "spell",
+      "sub_type": "combat_spell",
+      "element": "shadow",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Curse the enemy with void energy. Deal 4 damage to target opposing Beast or Player and draw 1 card. (Shadow Spell)",
+      "ability": {
+        "name": "Umbral Hex",
+        "effect": "umbral_hex",
+        "damage": 4,
+        "spell_element": "shadow"
+      },
+      "status": "CONFIRMED_SYSTEM"
+    },
+    {
+      "id": "nano_repair_matrix",
+      "name": "Nano Repair Matrix",
+      "card_type": "spell",
+      "sub_type": "support_spell",
+      "element": "mechanical",
+      "mana_cost": 2,
+      "stone_cost": {},
+      "description": "Deploy self-assembling nanobots. Restore 5 HP to target friendly Beast and grant +3 Shield HP. (Mechanical Spell)",
+      "ability": {
+        "name": "Nano Repair Matrix",
+        "effect": "nano_repair",
+        "heal_amount": 5,
+        "shield_amount": 3,
+        "spell_element": "mechanical"
+      },
+      "status": "CONFIRMED_SYSTEM"
     }
   ]
 }

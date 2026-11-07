@@ -12,6 +12,7 @@ signal beast_transcended(player_id: int, beast: BeastInstance)
 signal beast_ascended(player_id: int, beast: BeastInstance)
 signal god_dragon_summoned(player_id: int, beast: BeastInstance)
 signal spell_cast(player_id: int, card: CardData)
+signal realm_changed(player_id: int, realm_card: CardData, replaced_realm: CardData)
 signal combat_resolved(result: Dictionary)
 signal deck_shuffled(player_id: int)
 signal game_ended(winner_id: int, reason: String)
@@ -21,6 +22,8 @@ var active_player_id: int = 0 # 0 = Player, 1 = Opponent
 var is_game_over: bool = false
 var winner_id: int = -1
 var player_has_summoned_god_dragon: Array[bool] = [false, false]
+var active_realm: CardData = null
+var active_realm_owner_id: int = -1
 
 # Player states (0 and 1)
 var player_hp: Array[int] = [RulesConfig.STARTING_PLAYER_HP, RulesConfig.STARTING_PLAYER_HP]
@@ -59,6 +62,8 @@ func start_game(deck0_ids: Array = [], deck1_ids: Array = [], starting_player: i
 	winner_id = -1
 	turn_number = 1
 	active_player_id = clampi(starting_player, 0, 1)
+	active_realm = null
+	active_realm_owner_id = -1
 	
 	for p in range(2):
 		player_hp[p] = RulesConfig.STARTING_PLAYER_HP
@@ -280,16 +285,49 @@ func evolve_beast(player_id: int, beast_field_index: int, evo_card_hand_index: i
 	var evo_card: CardData = hand[evo_card_hand_index]
 	var stone_mgr = player_stones[player_id]
 	
-	var check = EvolutionEngine.can_evolve(beast, evo_card, stone_mgr)
+	var check = EvolutionEngine.can_evolve(beast, evo_card, stone_mgr, active_realm)
 	if not check.valid:
 		return false
 		
-	if EvolutionEngine.execute_evolution(beast, evo_card, stone_mgr):
+	if EvolutionEngine.execute_evolution(beast, evo_card, stone_mgr, active_realm):
 		hand.remove_at(evo_card_hand_index)
 		beast_evolved.emit(player_id, beast)
 		card_played.emit(player_id, evo_card)
 		return true
 	return false
+
+func play_realm(player_id: int, hand_index: int) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.card_type != "realm":
+		return {"success": false, "error": "Card is not a Realm / Location card"}
+		
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+		
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	
+	var old_realm: CardData = active_realm
+	var old_owner: int = active_realm_owner_id
+	if old_realm != null and old_owner >= 0 and old_owner <= 1:
+		player_discards[old_owner].append(old_realm)
+		
+	active_realm = card
+	active_realm_owner_id = player_id
+	realm_changed.emit(player_id, card, old_realm)
+	card_played.emit(player_id, card)
+	return {
+		"success": true,
+		"realm": card,
+		"replaced_realm": old_realm,
+		"details": card.name + " is now the active Realm! Evolution stone requirements reduced by 1."
+	}
 
 func fuse_beasts(player_id: int, fusion_card_hand_index: int) -> BeastInstance:
 	if player_id != active_player_id or is_game_over:
@@ -540,6 +578,58 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 			if target_beast:
 				target_beast.cleanse()
 				target_beast.heal(heal)
+			else:
+				heal_player(player_id, heal)
+		"molten_meteor":
+			var dmg = card.ability.get("damage", 3)
+			var p_dmg = card.ability.get("player_damage", 2)
+			var enemy_id = 1 if player_id == 0 else 0
+			for eb in player_fields[enemy_id]:
+				if eb is BeastInstance and not eb.is_dead():
+					eb.take_damage(dmg)
+			deal_player_damage(enemy_id, p_dmg)
+		"stun_strike":
+			var dmg = card.ability.get("damage", 3)
+			var turns = card.ability.get("stun_turns", 1)
+			if target_beast:
+				target_beast.take_damage(dmg)
+				target_beast.apply_status("stun", turns)
+			else:
+				var enemy_id = 1 if player_id == 0 else 0
+				deal_player_damage(enemy_id, dmg)
+		"tailwind_blessing":
+			var atk_buff = card.ability.get("attack_buff", 3)
+			if target_beast:
+				target_beast.bonus_attack += atk_buff
+			elif player_fields[player_id].size() > 0:
+				player_fields[player_id][0].bonus_attack += atk_buff
+			draw_card(player_id)
+		"permafrost_shatter":
+			var base_dmg = card.ability.get("damage", 3)
+			var frozen_dmg = card.ability.get("frozen_damage", 6)
+			if target_beast:
+				var actual = frozen_dmg if target_beast.freeze_turns > 0 else base_dmg
+				target_beast.take_damage(actual)
+			else:
+				var enemy_id = 1 if player_id == 0 else 0
+				deal_player_damage(enemy_id, base_dmg)
+		"umbral_hex":
+			var dmg = card.ability.get("damage", 4)
+			if target_beast:
+				target_beast.take_damage(dmg)
+			else:
+				var enemy_id = 1 if player_id == 0 else 0
+				deal_player_damage(enemy_id, dmg)
+			draw_card(player_id)
+		"nano_repair":
+			var heal = card.ability.get("heal_amount", 5)
+			var shd = card.ability.get("shield_amount", 3)
+			if target_beast:
+				target_beast.heal(heal)
+				target_beast.shield_hp += shd
+			elif player_fields[player_id].size() > 0:
+				player_fields[player_id][0].heal(heal)
+				player_fields[player_id][0].shield_hp += shd
 			else:
 				heal_player(player_id, heal)
 				

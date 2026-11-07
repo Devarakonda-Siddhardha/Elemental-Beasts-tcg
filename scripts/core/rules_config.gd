@@ -20,8 +20,8 @@ const GOD_DRAGON_REQUIRED_BEASTS: int = 3
 const GOD_DRAGON_STONE_EACH: int = 1
 const GOD_DRAGON_MAX_PER_DECK: int = 1
 
-# [PROVISIONAL] Stone placement rules
-const STONE_PLACEMENTS_PER_TURN: int = 1
+# [CONFIRMED] Stone placement rules: unlimited Element Stone cards can be played from hand per turn
+const STONE_PLACEMENTS_PER_TURN: int = 999
 
 # [PROVISIONAL] Match & Board rules
 const STARTING_PLAYER_HP: int = 30

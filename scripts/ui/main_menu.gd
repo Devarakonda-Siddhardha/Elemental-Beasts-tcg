@@ -14,8 +14,15 @@ extends Control
 var _bob_time: float = 0.0
 var _floating_base_y: float = 500.0
 var _toast_panel: PanelContainer = null
+static var _welcome_played: bool = false
 
 func _ready() -> void:
+	if not _welcome_played and has_node("/root/SoundManager"):
+		_welcome_played = true
+		var sm = get_node("/root/SoundManager")
+		if sm.has_method("play_voice"):
+			sm.play_voice("vo_welcome")
+
 	vs_ai_button.pressed.connect(_on_vs_ai_pressed)
 	pvp_button.pressed.connect(_on_pvp_pressed)
 	if pack_opening_button:
@@ -47,6 +54,7 @@ func _ready() -> void:
 			btn.pivot_offset = Vector2(195.0, 19.0)
 			btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 			btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
+
 
 func _process(delta: float) -> void:
 	if floating_pack_widget:

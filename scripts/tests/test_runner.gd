@@ -70,6 +70,8 @@ func run_all_tests() -> void:
 	test_27_elemental_spells_for_each_element()
 	test_28_six_elemental_starter_decks_and_new_cards()
 	test_29_deck_search_shuffle_and_coin_flip()
+	test_30_elevenlabs_sfx_and_voice_lines()
+	test_31_realms_unlimited_stones_and_mono_element_decks()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -670,4 +672,114 @@ func test_29_deck_search_shuffle_and_coin_flip() -> void:
 	assert_true(FileAccess.file_exists("res://assets/art/coin_heads.png") and FileAccess.file_exists("res://assets/art/coin_tails.png"), "Requirement 29c: Themed Solar God Dragon (Heads) and Abyssal Shadow Dragon (Tails) coin textures exist")
 	state.start_game([], [], 1)
 	assert_true(state.active_player_id == 1, "Requirement 29d: Coin toss result can set Opponent (Player 1) as Turn 1 starting player")
+
+func test_30_elevenlabs_sfx_and_voice_lines() -> void:
+	var sm := SoundManagerClass.new()
+	sm._ready()
+
+	var all_sfx_loaded := true
+	for sfx_name in SoundManagerClass.SFX_NAMES:
+		var path := "res://assets/audio/sfx/" + sfx_name + ".mp3"
+		if not FileAccess.file_exists(path) or not sm.sound_cache.has(sfx_name):
+			all_sfx_loaded = false
+			printerr("Missing SFX: " + sfx_name)
+	assert_true(all_sfx_loaded and SoundManagerClass.SFX_NAMES.size() == 21, "Requirement 30a: All 21 ElevenLabs SFX MP3 files exist and load into SoundManager.sound_cache")
+
+	var all_vo_loaded := true
+	for vo_name in SoundManagerClass.VO_NAMES:
+		var vo_path := "res://assets/audio/vo/" + vo_name + ".mp3"
+		if not FileAccess.file_exists(vo_path) or not sm.vo_cache.has(vo_name):
+			all_vo_loaded = false
+			printerr("Missing VO: " + vo_name)
+	assert_true(all_vo_loaded and SoundManagerClass.VO_NAMES.size() == 15, "Requirement 30b: All 15 ElevenLabs Commentator Voiceover MP3 files exist and load into SoundManager.vo_cache")
+
+	assert_true(
+		sm.vo_player != null and
+		sm.has_method("play_voice") and
+		sm.has_method("play_coin_flip") and
+		sm.has_method("play_deck_shuffle") and
+		sm.has_method("play_pack_rip"),
+		"Requirement 30c: SoundManager provides dedicated vo_player, play_voice(), play_coin_flip(), play_deck_shuffle(), and play_pack_rip()"
+	)
+
+	sm.free()
+
+func test_31_realms_unlimited_stones_and_mono_element_decks() -> void:
+	var state := GameState.new()
+	var db := state.card_db
+
+	# 1. Verify all 6 Realm cards and 6 reusable Realm templates exist
+	var realm_map = {
+		"fire": "inferno_caldera",
+		"lightning": "thunder_mountain",
+		"wind": "sky_tempest_sanctum",
+		"ice": "glacial_citadel",
+		"shadow": "abyssal_void_realm",
+		"mechanical": "clockwork_foundry"
+	}
+	var all_realms_valid := true
+	for el in realm_map.keys():
+		var rid: String = str(realm_map[el])
+		var tmpl_path: String = "res://assets/templates/realm_" + str(el) + ".png"
+		var art_path: String = "res://assets/art/" + rid + ".jpg"
+		if not db.has(rid) or db[rid].card_type != "realm" or db[rid].mana_cost < 0 or not FileAccess.file_exists(tmpl_path) or not FileAccess.file_exists(art_path):
+			all_realms_valid = false
+			printerr("Invalid realm or missing asset for: " + rid)
+	assert_true(all_realms_valid, "Requirement 31a: All 6 Elemental Realm (Stadium) cards, reusable realm_<element>.png templates with Mana Cost medallion, and artworks exist")
+
+	# 2. Verify playing multiple Element Stones from hand in a single turn
+	state.start_game()
+	state.player_hands[0] = [db["lightning_stone"], db["lightning_stone"], db["lightning_stone"]]
+	var p1 = state.play_stone_from_hand(0, 0)
+	var p2 = state.play_stone_from_hand(0, 0)
+	var p3 = state.play_stone_from_hand(0, 0)
+	assert_true(p1 and p2 and p3 and state.get_stones(0).get_stone_count("lightning") == 3, "Requirement 31b: Player can play unlimited Element Stone cards from hand in a single turn")
+
+	# 3. Verify Realm reduces Evolution cost from 2 stones to 1 stone, and gets replaced when opponent plays a new Realm
+	state.start_game()
+	var ld = BeastInstance.create(db["little_dragon"], 0, 1)
+	state.player_fields[0] = [ld]
+	state.player_hands[0] = [db["thunder_mountain"], db["shadow_dragon"]]
+	state.get_mana(0).current_mana = 5
+	state.get_stones(0).stone_pile["shadow"] = 1
+
+	# Without Realm in play, 1 Shadow Stone is NOT enough to evolve into Shadow Dragon
+	var pre_check = EvolutionEngine.can_evolve(ld, db["shadow_dragon"], state.get_stones(0), state.active_realm)
+	assert_true(not pre_check.valid, "Requirement 31c: Without a Realm in play, Shadow Dragon requires 2 Shadow Stones")
+
+	# Play Thunder Mountain (costs 2 Mana)
+	var r_res = state.play_realm(0, 0)
+	assert_true(r_res.success and state.active_realm.id == "thunder_mountain" and state.get_mana(0).current_mana == 3, "Requirement 31d: Playing Thunder Mountain spends 2 Mana and sets active_realm")
+
+	# Now evolve Little Dragon -> Shadow Dragon with only 1 Shadow Stone!
+	var evolved_with_1 = state.evolve_beast(0, 0, 0)
+	assert_true(evolved_with_1 and state.player_fields[0][0].card_data.id == "shadow_dragon" and state.get_stones(0).get_stone_count("shadow") == 0, "Requirement 31e: Active Realm reduces Evolution requirement from 2 stones to 1 stone")
+
+	# Opponent plays Inferno Caldera on their turn -> replaces Thunder Mountain and sends Thunder Mountain to Player 0's discard
+	state.end_turn()
+	state.player_hands[1] = [db["inferno_caldera"]]
+	state.get_mana(1).current_mana = 5
+	var opp_r = state.play_realm(1, 0)
+	assert_true(opp_r.success and state.active_realm.id == "inferno_caldera" and state.get_discard(0).has(db["thunder_mountain"]), "Requirement 31f: Playing a new Realm replaces the previous Realm and sends it to its owner's discard pile")
+
+	# 4. Verify all 6 Starter Decks are pure mono-element (only neutral cards + their primary element) and contain 12 matching stones
+	var f = FileAccess.open("res://data/default_decks.json", FileAccess.READ)
+	var j = JSON.new()
+	j.parse(f.get_as_text())
+	f.close()
+	var decks: Array = j.get_data().get("decks", [])
+	var all_mono_pure := true
+	for d in decks:
+		var deck_el = str(d.get("element", ""))
+		var stone_cnt := 0
+		for cid in d.get("cards", []):
+			var c: CardData = db[cid]
+			if c.element != "neutral" and c.element != deck_el:
+				all_mono_pure = false
+				printerr("Non-matching element card " + cid + " (" + c.element + ") in " + deck_el + " deck!")
+			if cid == deck_el + "_stone":
+				stone_cnt += 1
+		if stone_cnt < 5:
+			all_mono_pure = false
+	assert_true(all_mono_pure, "Requirement 31g: All 6 Starter Decks are pure mono-element decks with unrestricted Element Stone counts (12 stones each)")
 

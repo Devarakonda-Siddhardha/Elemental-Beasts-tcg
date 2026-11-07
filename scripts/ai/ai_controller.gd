@@ -13,12 +13,23 @@ func execute_turn() -> Array[String]:
 	if game_state.active_player_id != ai_player_id or game_state.is_game_over:
 		return action_log
 		
-	# 1. Play Element Stone if possible
-	var stone_idx = find_playable_stone_in_hand()
-	if stone_idx != -1:
+	# 1. Play ALL Element Stones in hand (unlimited stone placement per turn)
+	while true:
+		var stone_idx = find_playable_stone_in_hand()
+		if stone_idx == -1:
+			break
 		var card = game_state.get_hand(ai_player_id)[stone_idx]
 		if game_state.play_stone_from_hand(ai_player_id, stone_idx):
 			action_log.append("AI placed " + card.name + " into Stone Pile.")
+		else:
+			break
+
+	# 1b. Play Realm / Location card if AI has one in hand and no Realm of its element is active
+	var realm_idx = find_playable_realm_in_hand()
+	if realm_idx != -1:
+		var r_res = game_state.play_realm(ai_player_id, realm_idx)
+		if r_res.success:
+			action_log.append("AI activated Realm: " + r_res.details)
 			
 	# 2. Check for God Dragon Ritual
 	var god_idx = find_card_in_hand("god_dragon")
@@ -170,6 +181,16 @@ func find_playable_fusion_in_hand() -> int:
 				return i
 	return -1
 
+func find_playable_realm_in_hand() -> int:
+	var hand = game_state.get_hand(ai_player_id)
+	var mana_mgr = game_state.get_mana(ai_player_id)
+	for i in range(hand.size()):
+		var c: CardData = hand[i]
+		if c.card_type == "realm" and mana_mgr.can_spend(c.mana_cost):
+			if game_state.active_realm == null or game_state.active_realm.id != c.id:
+				return i
+	return -1
+
 func find_playable_evolution() -> Array[int]:
 	var field = game_state.get_field(ai_player_id)
 	var hand = game_state.get_hand(ai_player_id)
@@ -180,7 +201,7 @@ func find_playable_evolution() -> Array[int]:
 		for h_idx in range(hand.size()):
 			var card: CardData = hand[h_idx]
 			if card.evolution_stage == 1:
-				var check = EvolutionEngine.can_evolve(beast, card, stone_mgr)
+				var check = EvolutionEngine.can_evolve(beast, card, stone_mgr, game_state.active_realm)
 				if check.valid:
 					return [b_idx, h_idx]
 	return []
