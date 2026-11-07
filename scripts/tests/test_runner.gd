@@ -65,6 +65,7 @@ func run_all_tests() -> void:
 	test_22_ascension_from_hand_with_3_stones_each()
 	test_23_god_dragon_ritual_from_hand_and_one_per_duel()
 	test_24_procedural_playmat_generation()
+	test_25_supporter_card_artworks()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -515,3 +516,9 @@ func test_24_procedural_playmat_generation() -> void:
 	assert_true(bg_node is ProceduralPlaymat, "Requirement 24c: PlaymatBackground in battle scene is a ProceduralPlaymat node (zero static image dependencies)")
 	battle_instance.free()
 	playmat.free()
+
+func test_25_supporter_card_artworks() -> void:
+	var supporter_ids = ["compass", "lightning_strike", "dragon_elixir", "elemental_shield"]
+	for sid in supporter_ids:
+		var art_path = "res://assets/art/" + sid + ".jpg"
+		assert_true(FileAccess.file_exists(art_path), "Requirement 25: Supporter card '" + sid + "' has its own dedicated artwork", art_path)
