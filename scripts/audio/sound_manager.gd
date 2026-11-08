@@ -5,8 +5,10 @@ const SoundGen = preload("res://scripts/audio/procedural_sound_generator.gd")
 
 var sound_cache: Dictionary = {}
 var vo_cache: Dictionary = {}
+var bgm_cache: Dictionary = {}
 var player_pool: Array[AudioStreamPlayer] = []
 var vo_player: AudioStreamPlayer = null
+var bgm_player: AudioStreamPlayer = null
 const POOL_SIZE: int = 8
 var current_player_index: int = 0
 
@@ -14,10 +16,17 @@ var is_muted: bool = false
 var master_volume_db: float = 0.0
 var sfx_muted: bool = false
 var vo_muted: bool = false
+var bgm_muted: bool = false
 var sfx_volume_db: float = 0.0
 var vo_volume_db: float = 0.0
+var bgm_volume_db: float = -4.0
+var current_bgm_track: String = ""
 
 const SETTINGS_PATH: String = "user://audio_settings.cfg"
+
+const BGM_NAMES: Array[String] = [
+	"main_menu_theme"
+]
 
 const SFX_NAMES: Array[String] = [
 	"card_hover",
@@ -72,15 +81,19 @@ func load_audio_settings() -> void:
 	if cfg.load(SETTINGS_PATH) == OK:
 		sfx_muted = bool(cfg.get_value("audio", "sfx_muted", false))
 		vo_muted = bool(cfg.get_value("audio", "vo_muted", false))
+		bgm_muted = bool(cfg.get_value("audio", "bgm_muted", false))
 		sfx_volume_db = float(cfg.get_value("audio", "sfx_volume_db", 0.0))
 		vo_volume_db = float(cfg.get_value("audio", "vo_volume_db", 0.0))
+		bgm_volume_db = float(cfg.get_value("audio", "bgm_volume_db", -4.0))
 
 func save_audio_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("audio", "sfx_muted", sfx_muted)
 	cfg.set_value("audio", "vo_muted", vo_muted)
+	cfg.set_value("audio", "bgm_muted", bgm_muted)
 	cfg.set_value("audio", "sfx_volume_db", sfx_volume_db)
 	cfg.set_value("audio", "vo_volume_db", vo_volume_db)
+	cfg.set_value("audio", "bgm_volume_db", bgm_volume_db)
 	cfg.save(SETTINGS_PATH)
 
 func set_sfx_muted(muted: bool) -> void:
@@ -95,6 +108,14 @@ func set_vo_muted(muted: bool) -> void:
 	vo_muted = muted
 	if vo_muted and vo_player and vo_player.playing:
 		vo_player.stop()
+	save_audio_settings()
+
+func set_bgm_muted(muted: bool) -> void:
+	bgm_muted = muted
+	if bgm_muted and bgm_player and bgm_player.playing:
+		bgm_player.stop()
+	elif not bgm_muted and current_bgm_track != "":
+		play_bgm(current_bgm_track)
 	save_audio_settings()
 
 func set_sfx_volume_percent(pct: float) -> void:
@@ -115,6 +136,16 @@ func set_vo_volume_percent(pct: float) -> void:
 		vo_player.volume_db = master_volume_db + vo_volume_db + 2.5
 	save_audio_settings()
 
+func set_bgm_volume_percent(pct: float) -> void:
+	var clamped := clampf(pct, 0.0, 100.0)
+	if clamped <= 0.5:
+		bgm_volume_db = -40.0
+	else:
+		bgm_volume_db = linear_to_db(clamped / 100.0) - 4.0
+	if bgm_player and bgm_player.playing:
+		bgm_player.volume_db = master_volume_db + bgm_volume_db
+	save_audio_settings()
+
 func get_sfx_volume_percent() -> float:
 	if sfx_volume_db <= -39.0:
 		return 0.0
@@ -125,6 +156,11 @@ func get_vo_volume_percent() -> float:
 		return 0.0
 	return clampf(round(db_to_linear(vo_volume_db) * 100.0), 0.0, 100.0)
 
+func get_bgm_volume_percent() -> float:
+	if bgm_volume_db <= -39.0:
+		return 0.0
+	return clampf(round(db_to_linear(bgm_volume_db + 4.0) * 100.0), 0.0, 100.0)
+
 func _setup_audio_players() -> void:
 	for i in range(POOL_SIZE):
 		var player := AudioStreamPlayer.new()
@@ -134,8 +170,16 @@ func _setup_audio_players() -> void:
 	vo_player = AudioStreamPlayer.new()
 	vo_player.bus = "Master"
 	add_child(vo_player)
+	bgm_player = AudioStreamPlayer.new()
+	bgm_player.bus = "Master"
+	bgm_player.finished.connect(_on_bgm_finished)
+	add_child(bgm_player)
 
-func _load_mp3_stream(res_path: String) -> AudioStream:
+func _on_bgm_finished() -> void:
+	if not is_muted and not bgm_muted and current_bgm_track != "" and bgm_player != null:
+		bgm_player.play()
+
+func _load_mp3_stream(res_path: String, enable_loop: bool = false) -> AudioStream:
 	if FileAccess.file_exists(res_path):
 		var f := FileAccess.open(res_path, FileAccess.READ)
 		if f:
@@ -144,10 +188,13 @@ func _load_mp3_stream(res_path: String) -> AudioStream:
 			if bytes.size() > 0:
 				var mp3 := AudioStreamMP3.new()
 				mp3.data = bytes
+				mp3.loop = enable_loop
 				return mp3
 	if ResourceLoader.exists(res_path):
 		var res = load(res_path)
 		if res is AudioStream:
+			if res is AudioStreamMP3:
+				res.loop = enable_loop
 			return res
 	return null
 
@@ -190,6 +237,36 @@ func _pregenerate_sounds() -> void:
 		if vo_stream != null:
 			vo_cache[vo_name] = vo_stream
 
+	for bgm_name in BGM_NAMES:
+		var bgm_path := "res://assets/audio/bgm/" + bgm_name + ".mp3"
+		var bgm_stream := _load_mp3_stream(bgm_path, true)
+		if bgm_stream != null:
+			bgm_cache[bgm_name] = bgm_stream
+		else:
+			bgm_cache[bgm_name] = SoundGen.generate_main_menu_bgm()
+
+func play_bgm(track_name: String = "main_menu_theme") -> void:
+	var clean_name := track_name.trim_suffix(".mp3")
+	current_bgm_track = clean_name
+	if is_muted or bgm_muted or bgm_volume_db <= -39.0 or bgm_player == null:
+		return
+	if not bgm_cache.has(clean_name):
+		return
+	var stream: AudioStream = bgm_cache[clean_name]
+	if bgm_player.playing and bgm_player.stream == stream:
+		bgm_player.volume_db = master_volume_db + bgm_volume_db
+		return
+	bgm_player.stream = stream
+	bgm_player.volume_db = master_volume_db + bgm_volume_db
+	bgm_player.pitch_scale = 1.0
+	if bgm_player.is_inside_tree():
+		bgm_player.play()
+
+func stop_bgm() -> void:
+	current_bgm_track = ""
+	if bgm_player and bgm_player.playing:
+		bgm_player.stop()
+
 func play_sound(sound_name: String, volume_db_offset: float = 0.0, pitch_scale: float = 1.0) -> void:
 	if is_muted or sfx_muted or sfx_volume_db <= -39.0 or player_pool.is_empty():
 		return
@@ -204,7 +281,8 @@ func play_sound(sound_name: String, volume_db_offset: float = 0.0, pitch_scale: 
 	player.stream = stream
 	player.volume_db = master_volume_db + sfx_volume_db + volume_db_offset
 	player.pitch_scale = pitch_scale
-	player.play()
+	if player.is_inside_tree():
+		player.play()
 
 func play_voice(vo_name: String, volume_db_offset: float = 2.5) -> void:
 	if is_muted or vo_muted or vo_volume_db <= -39.0 or vo_player == null:
@@ -217,7 +295,8 @@ func play_voice(vo_name: String, volume_db_offset: float = 2.5) -> void:
 	vo_player.stream = stream
 	vo_player.volume_db = master_volume_db + vo_volume_db + volume_db_offset
 	vo_player.pitch_scale = 1.0
-	vo_player.play()
+	if vo_player.is_inside_tree():
+		vo_player.play()
 
 func show_audio_settings_modal(parent_node: Node) -> Control:
 	if not parent_node:
@@ -233,8 +312,8 @@ func show_audio_settings_modal(parent_node: Node) -> Control:
 	parent_node.add_child(overlay)
 
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(520, 340)
-	panel.position = Vector2(380, 190)
+	panel.custom_minimum_size = Vector2(540, 420)
+	panel.position = Vector2(370, 150)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.06, 0.14, 0.98)
 	sb.border_color = Color(0.95, 0.78, 0.28, 1.0)
@@ -248,15 +327,55 @@ func show_audio_settings_modal(parent_node: Node) -> Control:
 	overlay.add_child(panel)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 16)
+	vbox.add_theme_constant_override("separation", 14)
 	panel.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "⚙ AUDIO & COMMENTATOR SETTINGS"
+	title.text = "⚙ AUDIO, MUSIC & COMMENTATOR SETTINGS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 19)
+	title.add_theme_font_size_override("font_size", 18)
 	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.42))
 	vbox.add_child(title)
+
+	# Background Music (BGM) Section
+	var bgm_box := VBoxContainer.new()
+	bgm_box.add_theme_constant_override("separation", 6)
+	vbox.add_child(bgm_box)
+
+	var bgm_row := HBoxContainer.new()
+	bgm_row.add_theme_constant_override("separation", 12)
+	bgm_box.add_child(bgm_row)
+
+	var bgm_lbl := Label.new()
+	bgm_lbl.text = "🎵 Background Music (Main Menu Theme)"
+	bgm_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bgm_lbl.add_theme_font_size_override("font_size", 15)
+	bgm_lbl.add_theme_color_override("font_color", Color(0.92, 0.94, 1.0))
+	bgm_row.add_child(bgm_lbl)
+
+	var bgm_mute_btn := CheckButton.new()
+	bgm_mute_btn.text = "Enabled" if not bgm_muted else "Muted"
+	bgm_mute_btn.button_pressed = not bgm_muted
+	bgm_row.add_child(bgm_mute_btn)
+
+	var bgm_slider_row := HBoxContainer.new()
+	bgm_slider_row.add_theme_constant_override("separation", 10)
+	bgm_box.add_child(bgm_slider_row)
+
+	var bgm_slider := HSlider.new()
+	bgm_slider.min_value = 0.0
+	bgm_slider.max_value = 100.0
+	bgm_slider.step = 5.0
+	bgm_slider.value = get_bgm_volume_percent()
+	bgm_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bgm_slider.custom_minimum_size = Vector2(280, 24)
+	bgm_slider_row.add_child(bgm_slider)
+
+	var bgm_pct_lbl := Label.new()
+	bgm_pct_lbl.custom_minimum_size = Vector2(54, 0)
+	bgm_pct_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	bgm_pct_lbl.text = ("MUTE" if bgm_muted else str(int(bgm_slider.value)) + "%")
+	bgm_slider_row.add_child(bgm_pct_lbl)
 
 	# Sound Effects Section
 	var sfx_box := VBoxContainer.new()
@@ -338,6 +457,20 @@ func show_audio_settings_modal(parent_node: Node) -> Control:
 	vo_pct_lbl.text = ("MUTE" if vo_muted else str(int(vo_slider.value)) + "%")
 	vo_slider_row.add_child(vo_pct_lbl)
 
+	bgm_mute_btn.toggled.connect(func(enabled: bool):
+		set_bgm_muted(not enabled)
+		bgm_mute_btn.text = "Enabled" if enabled else "Muted"
+		bgm_pct_lbl.text = ("MUTE" if bgm_muted else str(int(bgm_slider.value)) + "%")
+	)
+	bgm_slider.value_changed.connect(func(val: float):
+		set_bgm_volume_percent(val)
+		if val > 0.0 and bgm_muted:
+			set_bgm_muted(false)
+			bgm_mute_btn.button_pressed = true
+			bgm_mute_btn.text = "Enabled"
+		bgm_pct_lbl.text = ("MUTE" if bgm_muted else str(int(val)) + "%")
+	)
+
 	sfx_mute_btn.toggled.connect(func(enabled: bool):
 		set_sfx_muted(not enabled)
 		sfx_mute_btn.text = "Enabled" if enabled else "Muted"
@@ -393,6 +526,7 @@ func show_audio_settings_modal(parent_node: Node) -> Control:
 	btn_row.add_child(close_btn)
 
 	return overlay
+
 
 # Convenience Sound API
 func play_card_hover() -> void:

@@ -74,6 +74,7 @@ func run_all_tests() -> void:
 	test_31_realms_unlimited_stones_and_mono_element_decks()
 	test_32_settings_log_toggle_vfx_and_collection_ui()
 	test_33_neutral_setup_supporter_cards()
+	test_34_victory_screen_and_main_menu_bgm()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -971,6 +972,72 @@ func test_33_neutral_setup_supporter_cards() -> void:
 			all_have_dragon_cards = false
 	assert_true(all_have_dragon_cards, "Requirement 33f: Starter Deck Selector modal displays the Main Dragon Card image (CardUI) for all 6 Elemental Starter Decks")
 	mm.free()
+
+func test_34_victory_screen_and_main_menu_bgm() -> void:
+	# 1. Test Main Menu BGM assets and SoundManager BGM capabilities
+	var bgm_file_exists = FileAccess.file_exists("res://assets/audio/bgm/main_menu_theme.mp3")
+	assert_true(bgm_file_exists, "Requirement 34a: main_menu_theme.mp3 exists on disk")
+
+	var sm := SoundManagerClass.new()
+	sm._ready()
+	var has_bgm_cache = sm.bgm_cache.has("main_menu_theme") and sm.bgm_cache["main_menu_theme"] != null
+	assert_true(has_bgm_cache, "Requirement 34b: SoundManager preloads main_menu_theme into bgm_cache")
+
+	var procedural_bgm = ProceduralSoundGenerator.generate_main_menu_bgm()
+	assert_true(procedural_bgm != null and procedural_bgm is AudioStreamWAV, "Requirement 34c: ProceduralSoundGenerator.generate_main_menu_bgm generates valid AudioStreamWAV fallback")
+
+	sm.play_bgm("main_menu_theme")
+	assert_true(sm.bgm_player != null and sm.current_bgm_track == "main_menu_theme", "Requirement 34d: SoundManager plays BGM through bgm_player AudioStreamPlayer")
+
+	sm.set_bgm_volume_percent(70.0)
+	assert_true(sm.get_bgm_volume_percent() == 70.0, "Requirement 34e: SoundManager sets BGM volume level correctly")
+
+	sm.set_bgm_muted(true)
+	assert_true(sm.bgm_muted, "Requirement 34f: SoundManager mutes BGM player")
+	sm.set_bgm_muted(false)
+
+	# 2. Test Battle Victory / Defeat Screen Modal
+	var battle_scene: PackedScene = load("res://scenes/battle.tscn")
+	var bc: BattleController = battle_scene.instantiate()
+	root.add_child(bc)
+	bc._ready()
+
+	# Populate some game state stats for the victory screen
+	bc.game_state.turn_number = 5
+	bc.game_state.player_hp[0] = 28
+	bc.game_state.player_hp[1] = 0
+
+	# Put a dragon on player 0's field to test MVP dragon picking
+	var test_dragon: CardData = bc.game_state.card_db.get("volcovolt_dragon")
+	if test_dragon:
+		bc.game_state.player_fields[0].append(test_dragon)
+
+	# Show victory screen for Player 0
+	bc.show_game_end_screen(0, "Opponent HP reached 0")
+
+	var end_screen: Control = bc.get_node_or_null("GameEndScreen")
+	assert_true(end_screen != null, "Requirement 34g: GameEndScreen modal is instantiated and displayed")
+
+	if end_screen:
+		var title_lbl: Label = end_screen.find_child("VictoryTitleLabel", true, false)
+		var mvp_card_ui = end_screen.find_child("MVPDragonCardUI", true, false)
+		var play_again_btn: Button = end_screen.find_child("PlayAgainButton", true, false)
+		var open_packs_btn: Button = end_screen.find_child("OpenPacksButton", true, false)
+		var return_menu_btn: Button = end_screen.find_child("ReturnMainMenuButton", true, false)
+
+		assert_true(title_lbl != null and title_lbl.text.contains("VICTORY"), "Requirement 34h: VictoryTitleLabel displays Victory title banner")
+		assert_true(mvp_card_ui != null and mvp_card_ui.card_data != null, "Requirement 34i: GameEndScreen showcases MVP Dragon CardUI")
+		assert_true(play_again_btn != null and open_packs_btn != null and return_menu_btn != null, "Requirement 34j: GameEndScreen provides Rematch, Open Packs, and Return to Menu action buttons")
+
+	# Test defeat screen update for Player 1
+	var defeat_screen: Control = bc.show_game_end_screen(1, "Your HP reached 0")
+	var defeat_lbl: Label = defeat_screen.find_child("VictoryTitleLabel", true, false) if defeat_screen else null
+	assert_true(defeat_lbl != null and defeat_lbl.text.contains("DEFEAT"), "Requirement 34k: GameEndScreen updates title to Defeat when player loses")
+
+	bc.queue_free()
+	sm.stop_bgm()
+	sm.free()
+
 
 
 

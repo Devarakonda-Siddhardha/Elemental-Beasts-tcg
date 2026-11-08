@@ -22,11 +22,15 @@ var _portal_frame_idx: int = 0
 
 func _ready() -> void:
 	_load_animated_portal_frames()
-	if not _welcome_played and has_node("/root/SoundManager"):
-		_welcome_played = true
+	if has_node("/root/SoundManager"):
 		var sm = get_node("/root/SoundManager")
-		if sm.has_method("play_voice"):
-			sm.play_voice("vo_welcome")
+		if sm.has_method("play_bgm"):
+			sm.play_bgm("main_menu_theme")
+		if not _welcome_played:
+			_welcome_played = true
+			if sm.has_method("play_voice"):
+				sm.play_voice("vo_welcome")
+
 
 	vs_ai_button.pressed.connect(_on_vs_ai_pressed)
 	pvp_button.pressed.connect(_on_pvp_pressed)

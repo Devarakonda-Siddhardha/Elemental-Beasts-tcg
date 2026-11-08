@@ -1306,8 +1306,308 @@ func _on_game_ended(winner: int, reason: String) -> void:
 				sm.play_voice("vo_defeat")
 	var msg = "[b][color=#e63946]GAME OVER! Player " + str(winner + 1) + " WINS! (" + reason + ")[/color][/b]"
 	log_message(msg)
-	prompt_banner.text = "GAME OVER! Player " + str(winner + 1) + " WINS!"
-	prompt_banner.visible = true
+	if prompt_banner:
+		prompt_banner.text = "GAME OVER! Player " + str(winner + 1) + " WINS!"
+		prompt_banner.visible = true
+	show_game_end_screen(winner, reason)
+
+func _pick_mvp_dragon_card(winner_id: int) -> CardData:
+	var best_card: CardData = null
+	var best_score: int = -1
+	if game_state != null:
+		# Check winner's field first
+		for b in game_state.get_field(winner_id):
+			if b is BeastInstance and b.card_data != null:
+				var sc: int = b.get_attack() * 3 + b.max_hp + b.card_data.evolution_stage * 15
+				if sc > best_score:
+					best_score = sc
+					best_card = b.card_data
+		# Fallback to player's hand or discard or deck
+		if best_card == null:
+			for pool in [game_state.get_hand(0), game_state.get_discard(0), game_state.get_deck(0)]:
+				for c in pool:
+					if c is CardData and c.card_type == "beast":
+						var sc2: int = c.attack * 3 + c.max_hp + c.evolution_stage * 15
+						if sc2 > best_score:
+							best_score = sc2
+							best_card = c
+		if best_card == null and game_state.card_db.has("fire_dragon"):
+			best_card = game_state.card_db["fire_dragon"]
+	return best_card
+
+func show_game_end_screen(winner: int, reason: String) -> Control:
+	var existing = get_node_or_null("GameEndScreen")
+	if existing:
+		existing.free()
+
+	var is_victory: bool = (winner == 0)
+	var accent_col: Color = Color(1.0, 0.84, 0.28, 1.0) if is_victory else Color(0.92, 0.28, 0.34, 1.0)
+	var border_col: Color = Color(0.98, 0.80, 0.24, 1.0) if is_victory else Color(0.82, 0.22, 0.28, 1.0)
+
+	var overlay := ColorRect.new()
+	overlay.name = "GameEndScreen"
+	overlay.color = Color(0.02, 0.02, 0.05, 0.90) if is_victory else Color(0.05, 0.01, 0.03, 0.92)
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 95
+	add_child(overlay)
+
+	# Radial aura glow behind modal
+	var aura := Panel.new()
+	aura.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	aura.size = Vector2(760, 480)
+	aura.position = Vector2(260, 120)
+	var aura_sb := StyleBoxFlat.new()
+	aura_sb.bg_color = Color(accent_col.r, accent_col.g, accent_col.b, 0.12)
+	aura_sb.set_corner_radius_all(240)
+	aura_sb.shadow_color = Color(accent_col.r, accent_col.g, accent_col.b, 0.38)
+	aura_sb.shadow_size = 64
+	aura.add_theme_stylebox_override("panel", aura_sb)
+	overlay.add_child(aura)
+
+	# Main Ornate Victory / Defeat Card Panel
+	var panel := PanelContainer.new()
+	panel.name = "EndModalPanel"
+	panel.custom_minimum_size = Vector2(860, 520)
+	panel.position = Vector2(210, 100)
+	panel.pivot_offset = Vector2(430, 260)
+	var p_sb := StyleBoxFlat.new()
+	p_sb.bg_color = Color(0.06, 0.07, 0.14, 0.98) if is_victory else Color(0.09, 0.05, 0.09, 0.98)
+	p_sb.border_color = border_col
+	p_sb.set_border_width_all(4)
+	p_sb.set_corner_radius_all(16)
+	p_sb.shadow_color = Color(0, 0, 0, 0.9)
+	p_sb.shadow_size = 28
+	p_sb.content_margin_left = 28
+	p_sb.content_margin_right = 28
+	p_sb.content_margin_top = 22
+	p_sb.content_margin_bottom = 22
+	panel.add_theme_stylebox_override("panel", p_sb)
+	overlay.add_child(panel)
+
+	var root_vbox := VBoxContainer.new()
+	root_vbox.add_theme_constant_override("separation", 14)
+	panel.add_child(root_vbox)
+
+	# 1. Header Crest & Title Banner
+	var header_box := VBoxContainer.new()
+	header_box.add_theme_constant_override("separation", 4)
+	root_vbox.add_child(header_box)
+
+	var title_lbl := Label.new()
+	title_lbl.name = "VictoryTitleLabel"
+	title_lbl.text = "🏆 VICTORY! — DRAGON MASTER TRIUMPHANT 🏆" if is_victory else "💀 DEFEAT — FALLEN IN THE ARENA 💀"
+	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_lbl.add_theme_font_size_override("font_size", 26)
+	title_lbl.add_theme_color_override("font_color", accent_col.lightened(0.18))
+	header_box.add_child(title_lbl)
+
+	var reason_lbl := Label.new()
+	reason_lbl.name = "ReasonSubtitleLabel"
+	reason_lbl.text = ("You conquered the Elemental Arena! (" + reason + ")") if is_victory else ("Player " + str(winner + 1) + " claimed victory. (" + reason + ")")
+	reason_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	reason_lbl.add_theme_font_size_override("font_size", 14)
+	reason_lbl.add_theme_color_override("font_color", Color(0.86, 0.88, 0.95))
+	header_box.add_child(reason_lbl)
+
+	# Divider line
+	var div := ColorRect.new()
+	div.custom_minimum_size = Vector2(0, 2)
+	div.color = Color(border_col.r, border_col.g, border_col.b, 0.55)
+	root_vbox.add_child(div)
+
+	# 2. Center Content: Left = MVP Dragon Card Showcase, Right = Match Summary & Rewards
+	var body_hbox := HBoxContainer.new()
+	body_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body_hbox.add_theme_constant_override("separation", 28)
+	body_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	root_vbox.add_child(body_hbox)
+
+	# Left Column: MVP Dragon CardUI Pedestal
+	var mvp_vbox := VBoxContainer.new()
+	mvp_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	mvp_vbox.add_theme_constant_override("separation", 6)
+	body_hbox.add_child(mvp_vbox)
+
+	var mvp_tag := Label.new()
+	mvp_tag.text = "✦ CHAMPION DRAGON ✦" if is_victory else "✦ ARENA MVP DRAGON ✦"
+	mvp_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mvp_tag.add_theme_font_size_override("font_size", 13)
+	mvp_tag.add_theme_color_override("font_color", accent_col)
+	mvp_vbox.add_child(mvp_tag)
+
+	var mvp_holder := Control.new()
+	mvp_holder.name = "MVPDragonHolder"
+	mvp_holder.custom_minimum_size = Vector2(180, 250)
+	mvp_vbox.add_child(mvp_holder)
+
+	var mvp_card_data: CardData = _pick_mvp_dragon_card(winner)
+	if mvp_card_data != null and card_ui_prefab != null:
+		var mvp_ui: CardUI = card_ui_prefab.instantiate()
+		mvp_ui.name = "MVPDragonCardUI"
+		mvp_ui.base_scale = Vector2(0.90, 0.90)
+		mvp_ui.hover_zoom = false
+		mvp_holder.add_child(mvp_ui)
+		mvp_ui.setup(mvp_card_data, use_legacy_art)
+		mvp_ui.scale = Vector2(0.90, 0.90)
+		mvp_ui.position = Vector2(0, 0)
+
+	# Right Column: Match Statistics & Honours
+	var stats_panel := PanelContainer.new()
+	stats_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stats_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var sp_sb := StyleBoxFlat.new()
+	sp_sb.bg_color = Color(0.09, 0.11, 0.20, 0.95)
+	sp_sb.border_color = Color(border_col.r, border_col.g, border_col.b, 0.65)
+	sp_sb.set_border_width_all(2)
+	sp_sb.set_corner_radius_all(12)
+	sp_sb.content_margin_left = 20
+	sp_sb.content_margin_right = 20
+	sp_sb.content_margin_top = 16
+	sp_sb.content_margin_bottom = 16
+	stats_panel.add_theme_stylebox_override("panel", sp_sb)
+	body_hbox.add_child(stats_panel)
+
+	var stats_vbox := VBoxContainer.new()
+	stats_vbox.name = "StatsVBox"
+	stats_vbox.add_theme_constant_override("separation", 10)
+	stats_panel.add_child(stats_vbox)
+
+	var stats_header := Label.new()
+	stats_header.text = "📜 DUEL CHRONICLE & STATISTICS"
+	stats_header.add_theme_font_size_override("font_size", 16)
+	stats_header.add_theme_color_override("font_color", Color(1.0, 0.90, 0.50))
+	stats_vbox.add_child(stats_header)
+
+	var turns_val: int = game_state.turn_number if game_state else 1
+	var p_hp: int = game_state.player_hp[0] if game_state else 0
+	var o_hp: int = game_state.player_hp[1] if game_state else 0
+	var p_stones: int = game_state.get_stones(0).get_total_stones() if game_state else 0
+	var p_field_cnt: int = game_state.get_field(0).size() if game_state else 0
+	var realm_name: String = game_state.active_realm.name if (game_state and game_state.active_realm != null) else "None"
+
+	var stat_rows := [
+		["⏳ Turns Elapsed", "Turn " + str(turns_val)],
+		["♥ Final Life Points", "You: " + str(p_hp) + " HP   |   Foe: " + str(o_hp) + " HP"],
+		["◈ Element Stones Harnessed", str(p_stones) + " Stones in Pile"],
+		["🐉 Surviving Dragons on Field", str(p_field_cnt) + " Active Beast(s)"],
+		["❖ Active Elemental Realm", realm_name],
+		["🎁 ArenaSpoils", "✦ +1 Elemental Booster Pack Ready!" if is_victory else "✦ Consolation Booster Pack Available!"]
+	]
+
+	for row_pair in stat_rows:
+		var r_h := HBoxContainer.new()
+		var k_lbl := Label.new()
+		k_lbl.text = str(row_pair[0])
+		k_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		k_lbl.add_theme_font_size_override("font_size", 13)
+		k_lbl.add_theme_color_override("font_color", Color(0.78, 0.84, 0.94))
+		r_h.add_child(k_lbl)
+
+		var v_lbl := Label.new()
+		v_lbl.text = str(row_pair[1])
+		v_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		v_lbl.add_theme_font_size_override("font_size", 13)
+		v_lbl.add_theme_color_override("font_color", Color(1.0, 0.94, 0.72))
+		r_h.add_child(v_lbl)
+		stats_vbox.add_child(r_h)
+
+	# 3. Bottom Action Buttons Row
+	var btn_row := HBoxContainer.new()
+	btn_row.name = "ActionButtonsRow"
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_row.add_theme_constant_override("separation", 18)
+	root_vbox.add_child(btn_row)
+
+	var rematch_btn := Button.new()
+	rematch_btn.name = "PlayAgainButton"
+	rematch_btn.text = "⚔ Play Again (Rematch)"
+	rematch_btn.custom_minimum_size = Vector2(220, 44)
+	var rm_sb := StyleBoxFlat.new()
+	rm_sb.bg_color = Color(0.14, 0.42, 0.24, 0.96)
+	rm_sb.border_color = Color(0.45, 0.95, 0.62, 1.0)
+	rm_sb.set_border_width_all(2)
+	rm_sb.set_corner_radius_all(8)
+	rematch_btn.add_theme_stylebox_override("normal", rm_sb)
+	rematch_btn.add_theme_font_size_override("font_size", 15)
+	rematch_btn.pressed.connect(func():
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
+		var new_battle = load("res://scenes/battle.tscn").instantiate()
+		new_battle.is_vs_ai = is_vs_ai
+		new_battle.selected_starter_deck_index = selected_starter_deck_index
+		get_tree().root.add_child(new_battle)
+		queue_free()
+	)
+	btn_row.add_child(rematch_btn)
+
+	var packs_btn := Button.new()
+	packs_btn.name = "OpenPacksButton"
+	packs_btn.text = "🎁 Open Booster Packs"
+	packs_btn.custom_minimum_size = Vector2(220, 44)
+	var pk_sb := StyleBoxFlat.new()
+	pk_sb.bg_color = Color(0.42, 0.28, 0.08, 0.96)
+	pk_sb.border_color = Color(1.0, 0.84, 0.28, 1.0)
+	pk_sb.set_border_width_all(2)
+	pk_sb.set_corner_radius_all(8)
+	packs_btn.add_theme_stylebox_override("normal", pk_sb)
+	packs_btn.add_theme_font_size_override("font_size", 15)
+	packs_btn.pressed.connect(func():
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
+		get_tree().change_scene_to_file("res://scenes/pack_opening.tscn")
+		queue_free()
+	)
+	btn_row.add_child(packs_btn)
+
+	var menu_btn := Button.new()
+	menu_btn.name = "ReturnMainMenuButton"
+	menu_btn.text = "🏰 Return to Main Menu"
+	menu_btn.custom_minimum_size = Vector2(220, 44)
+	var mn_sb := StyleBoxFlat.new()
+	mn_sb.bg_color = Color(0.16, 0.18, 0.30, 0.96)
+	mn_sb.border_color = Color(0.65, 0.75, 0.95, 1.0)
+	mn_sb.set_border_width_all(2)
+	mn_sb.set_corner_radius_all(8)
+	menu_btn.add_theme_stylebox_override("normal", mn_sb)
+	menu_btn.add_theme_font_size_override("font_size", 15)
+	menu_btn.pressed.connect(func():
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
+		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+		queue_free()
+	)
+	btn_row.add_child(menu_btn)
+
+	# Entrance pop-in & rising celebration particles when inside scene tree
+	if is_inside_tree():
+		panel.scale = Vector2(0.82, 0.82)
+		panel.modulate.a = 0.0
+		var tw := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(panel, "scale", Vector2.ONE, 0.34)
+		tw.parallel().tween_property(panel, "modulate:a", 1.0, 0.24)
+
+		for p_i in range(18):
+			var spark := Panel.new()
+			spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			spark.size = Vector2(10, 10)
+			var start_x := 180.0 + float((p_i * 57) % 920)
+			var start_y := 640.0 - float((p_i * 29) % 120)
+			spark.position = Vector2(start_x, start_y)
+			var sp_style := StyleBoxFlat.new()
+			sp_style.bg_color = accent_col.lightened(0.35)
+			sp_style.set_corner_radius_all(5)
+			sp_style.shadow_color = accent_col
+			sp_style.shadow_size = 8
+			spark.add_theme_stylebox_override("panel", sp_style)
+			overlay.add_child(spark)
+
+			var p_tw := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+			p_tw.tween_interval(float(p_i) * 0.04)
+			p_tw.tween_property(spark, "position", Vector2(start_x + sin(float(p_i)) * 45.0, start_y - 260.0), 1.4)
+			p_tw.parallel().tween_property(spark, "modulate:a", 0.0, 1.4)
+
+	return overlay
+
 
 func _on_legacy_toggle(toggled_on: bool) -> void:
 	if has_node("/root/SoundManager"):

@@ -392,3 +392,25 @@ static func generate_ui_click() -> AudioStreamWAV:
 		samples[i] = (wave * 0.7 + click * 0.3) * env * 0.5
 		
 	return create_wav_from_samples(samples)
+
+# 19. Looping Thematic Main Menu BGM Fallback (8.0s D-minor draconic harp & pad loop)
+static func generate_main_menu_bgm() -> AudioStreamWAV:
+	var duration: float = 8.0
+	var num_samples: int = int(SAMPLE_RATE * duration)
+	var samples: Array[float] = []
+	samples.resize(num_samples)
+	var arp_freqs: Array[float] = [293.66, 349.23, 440.0, 587.33, 440.0, 349.23, 261.63, 392.0]
+	for i in range(num_samples):
+		var t: float = float(i) / float(SAMPLE_RATE)
+		var step: int = int(t * 2.0) % arp_freqs.size()
+		var dt: float = fmod(t, 0.5)
+		var f: float = arp_freqs[step]
+		var arp: float = (sin(dt * f * TAU) + 0.4 * sin(dt * f * 2.0 * TAU)) * exp(-dt * 4.5) * 0.22
+		var drone: float = (sin(t * 146.83 * TAU) + 0.5 * sin(t * 220.0 * TAU)) * 0.14
+		samples[i] = clampf(arp + drone, -1.0, 1.0)
+	var wav := create_wav_from_samples(samples)
+	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	wav.loop_begin = 0
+	wav.loop_end = num_samples
+	return wav
+
