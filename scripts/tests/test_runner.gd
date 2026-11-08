@@ -958,5 +958,20 @@ func test_33_neutral_setup_supporter_cards() -> void:
 		"Requirement 33e: Elemental Convergence spends 2 Mana and searches deck for 2 Element Stone cards"
 	)
 
+	# 6. Verify Starter Deck Selector modal renders Main Dragon CardUI for each of the 6 Elemental Starter Decks
+	var mm_scene: PackedScene = load("res://scenes/main_menu.tscn")
+	var mm: Control = mm_scene.instantiate()
+	mm._show_starter_deck_selector(true)
+	var modal: Control = mm.get_node_or_null("DeckSelectModal")
+	var all_have_dragon_cards := (modal != null)
+	for el_check in ["fire", "lightning", "wind", "ice", "shadow", "mechanical"]:
+		var opt_btn = modal.find_child("DeckOption_" + el_check, true, false) if modal else null
+		var dragon_ui = opt_btn.find_child("MainDragonCardUI", true, false) if opt_btn else null
+		if opt_btn == null or dragon_ui == null or dragon_ui.card_data == null or dragon_ui.card_data.id != el_check + "_dragon":
+			all_have_dragon_cards = false
+	assert_true(all_have_dragon_cards, "Requirement 33f: Starter Deck Selector modal displays the Main Dragon Card image (CardUI) for all 6 Elemental Starter Decks")
+	mm.free()
+
+
 
 

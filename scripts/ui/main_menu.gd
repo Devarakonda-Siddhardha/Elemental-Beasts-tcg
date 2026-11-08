@@ -131,22 +131,24 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 	add_child(modal)
 
 	var panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(920, 520)
-	panel.position = Vector2(180, 100)
+	panel.custom_minimum_size = Vector2(1140, 620)
+	panel.position = Vector2(70, 50)
 	var sb = StyleBoxFlat.new()
-	sb.bg_color = Color(0.06, 0.06, 0.13, 0.98)
+	sb.bg_color = Color(0.05, 0.06, 0.12, 0.98)
 	sb.border_color = Color(0.95, 0.78, 0.28, 1.0)
 	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(12)
-	sb.content_margin_left = 24
-	sb.content_margin_right = 24
-	sb.content_margin_top = 18
-	sb.content_margin_bottom = 18
+	sb.set_corner_radius_all(14)
+	sb.shadow_color = Color(0.0, 0.0, 0.0, 0.85)
+	sb.shadow_size = 20
+	sb.content_margin_left = 20
+	sb.content_margin_right = 20
+	sb.content_margin_top = 14
+	sb.content_margin_bottom = 14
 	panel.add_theme_stylebox_override("panel", sb)
 	modal.add_child(panel)
 
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 14)
+	vbox.add_theme_constant_override("separation", 12)
 	panel.add_child(vbox)
 
 	var title = Label.new()
@@ -158,8 +160,8 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 
 	var grid = GridContainer.new()
 	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 16)
-	grid.add_theme_constant_override("v_separation", 14)
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 12)
 	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	vbox.add_child(grid)
 
@@ -171,6 +173,9 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 			decks_list = j.get_data().get("decks", [])
 		f.close()
 
+	var card_db: Dictionary = CardData.load_database()
+	var card_ui_prefab: PackedScene = load("res://scenes/card_ui.tscn")
+
 	var elem_colors = {
 		"fire": Color(0.95, 0.35, 0.18),
 		"lightning": Color(1.0, 0.82, 0.20),
@@ -180,75 +185,160 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 		"mechanical": Color(0.85, 0.76, 0.58)
 	}
 
+	var main_dragon_ids = {
+		"fire": "fire_dragon",
+		"lightning": "lightning_dragon",
+		"wind": "wind_dragon",
+		"ice": "ice_dragon",
+		"shadow": "shadow_dragon",
+		"mechanical": "mechanical_dragon"
+	}
+
 	for i in range(decks_list.size()):
 		var d = decks_list[i]
-		var el = str(d.get("element", "fire"))
+		var el: String = str(d.get("element", "fire"))
 		var col: Color = elem_colors.get(el, Color(0.95, 0.78, 0.28))
+		var main_dragon_id: String = str(main_dragon_ids.get(el, el + "_dragon"))
+		var dragon_card: CardData = card_db.get(main_dragon_id)
+
 		var card_btn = Button.new()
+		card_btn.name = "DeckOption_" + el
 		card_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card_btn.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		card_btn.custom_minimum_size = Vector2(276, 180)
+		card_btn.custom_minimum_size = Vector2(354, 240)
+		card_btn.clip_contents = true
 		var b_sb = StyleBoxFlat.new()
-		b_sb.bg_color = Color(0.09, 0.10, 0.18, 0.96)
+		b_sb.bg_color = Color(0.07, 0.08, 0.15, 0.96)
 		b_sb.border_color = col
 		b_sb.set_border_width_all(2)
-		b_sb.set_corner_radius_all(10)
-		b_sb.content_margin_left = 12
-		b_sb.content_margin_right = 12
-		b_sb.content_margin_top = 10
-		b_sb.content_margin_bottom = 10
+		b_sb.set_corner_radius_all(12)
 		var b_hover = b_sb.duplicate()
-		b_hover.bg_color = Color(0.16, 0.16, 0.28, 0.98)
+		b_hover.bg_color = Color(0.13, 0.15, 0.26, 0.98)
+		b_hover.border_color = col.lightened(0.35)
 		b_hover.set_border_width_all(3)
+		b_hover.shadow_color = Color(col.r, col.g, col.b, 0.45)
+		b_hover.shadow_size = 12
 		card_btn.add_theme_stylebox_override("normal", b_sb)
 		card_btn.add_theme_stylebox_override("hover", b_hover)
 		card_btn.add_theme_stylebox_override("pressed", b_hover)
 
-		var inner_v = VBoxContainer.new()
-		inner_v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		inner_v.offset_left = 12; inner_v.offset_right = -12; inner_v.offset_top = 10; inner_v.offset_bottom = -10
-		inner_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		inner_v.add_theme_constant_override("separation", 6)
+		# Subtle darkened dragon art backdrop inside the button
+		var bg_art_path := "res://assets/art/" + main_dragon_id + ".jpg"
+		if ResourceLoader.exists(bg_art_path):
+			var bg_art := TextureRect.new()
+			bg_art.name = "DragonArtBackdrop"
+			bg_art.texture = load(bg_art_path)
+			bg_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			bg_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			bg_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			bg_art.modulate = Color(0.32, 0.32, 0.38, 0.38)
+			bg_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card_btn.add_child(bg_art)
+
+		var main_hbox = HBoxContainer.new()
+		main_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		main_hbox.offset_left = 10
+		main_hbox.offset_right = -10
+		main_hbox.offset_top = 8
+		main_hbox.offset_bottom = -8
+		main_hbox.add_theme_constant_override("separation", 12)
+		main_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card_btn.add_child(main_hbox)
+
+		# Left: Actual rendered Main Dragon Card (CardUI) at 0.78 scale (156x217)
+		var card_holder := Control.new()
+		card_holder.name = "MainDragonCardHolder"
+		card_holder.custom_minimum_size = Vector2(156, 218)
+		card_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		card_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		main_hbox.add_child(card_holder)
+
+		if dragon_card != null and card_ui_prefab != null:
+			var dragon_ui: CardUI = card_ui_prefab.instantiate()
+			dragon_ui.name = "MainDragonCardUI"
+			dragon_ui.base_scale = Vector2(0.78, 0.78)
+			dragon_ui.hover_zoom = false
+			dragon_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card_holder.add_child(dragon_ui)
+			dragon_ui.setup(dragon_card, false)
+			dragon_ui.scale = Vector2(0.78, 0.78)
+			dragon_ui.position = Vector2(0, 1)
+			for ch in dragon_ui.get_children():
+				if ch is Control:
+					ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+		# Right: Deck Crest, Title, Flagship Dragon Name & Stats, and Enter Arena CTA
+		var right_v = VBoxContainer.new()
+		right_v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		right_v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		right_v.alignment = BoxContainer.ALIGNMENT_CENTER
+		right_v.add_theme_constant_override("separation", 6)
+		right_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		main_hbox.add_child(right_v)
 
 		var h_head = HBoxContainer.new()
-		h_head.alignment = BoxContainer.ALIGNMENT_CENTER
+		h_head.add_theme_constant_override("separation", 6)
 		h_head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var ic_path = "res://assets/icons/" + el + ".png"
 		if ResourceLoader.exists(ic_path):
 			var tex = TextureRect.new()
 			tex.texture = load(ic_path)
-			tex.custom_minimum_size = Vector2(28, 28)
+			tex.custom_minimum_size = Vector2(26, 26)
 			tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			h_head.add_child(tex)
 		var d_title = Label.new()
-		d_title.text = "  " + str(d.get("name", "Starter Deck"))
-		d_title.add_theme_font_size_override("font_size", 12)
-		d_title.add_theme_color_override("font_color", col.lightened(0.25))
+		d_title.text = str(d.get("name", "Starter Deck")).replace(" (" + el.capitalize() + " Starter)", "")
+		d_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		d_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		d_title.add_theme_font_size_override("font_size", 14)
+		d_title.add_theme_color_override("font_color", col.lightened(0.30))
 		d_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		h_head.add_child(d_title)
-		inner_v.add_child(h_head)
+		right_v.add_child(h_head)
 
-		var d_desc = Label.new()
-		d_desc.text = str(d.get("description", ""))
-		d_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		d_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		d_desc.add_theme_font_size_override("font_size", 11)
-		d_desc.add_theme_color_override("font_color", Color(0.86, 0.86, 0.92))
-		d_desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		d_desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		inner_v.add_child(d_desc)
+		var dragon_badge = Label.new()
+		if dragon_card != null:
+			dragon_badge.text = "🐉 Flagship: " + dragon_card.name + "\n⚔ " + str(dragon_card.attack) + " ATK   •   ♥ " + str(dragon_card.hp) + " HP"
+		else:
+			dragon_badge.text = "🐉 " + el.capitalize() + " Dragon"
+		dragon_badge.add_theme_font_size_override("font_size", 12)
+		dragon_badge.add_theme_color_override("font_color", Color(0.96, 0.94, 0.86))
+		dragon_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		right_v.add_child(dragon_badge)
 
+		var ability_preview = Label.new()
+		if dragon_card != null and not dragon_card.ability.is_empty():
+			ability_preview.text = "✦ " + str(dragon_card.ability.get("name", "")) + ": " + str(dragon_card.ability.get("description", ""))
+		else:
+			ability_preview.text = str(d.get("description", ""))
+		ability_preview.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ability_preview.add_theme_font_size_override("font_size", 10)
+		ability_preview.add_theme_color_override("font_color", Color(0.80, 0.84, 0.92))
+		ability_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		ability_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		right_v.add_child(ability_preview)
+
+		var cta_panel = PanelContainer.new()
+		cta_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var cta_sb = StyleBoxFlat.new()
+		cta_sb.bg_color = Color(col.r * 0.28, col.g * 0.28, col.b * 0.28, 0.92)
+		cta_sb.border_color = col.lightened(0.25)
+		cta_sb.set_border_width_all(1)
+		cta_sb.set_corner_radius_all(6)
+		cta_sb.content_margin_top = 4
+		cta_sb.content_margin_bottom = 4
+		cta_panel.add_theme_stylebox_override("panel", cta_sb)
 		var play_lbl = Label.new()
 		play_lbl.text = "⚔ Select & Enter Arena ➔"
 		play_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		play_lbl.add_theme_font_size_override("font_size", 12)
-		play_lbl.add_theme_color_override("font_color", Color(1.0, 0.90, 0.45))
+		play_lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.50))
 		play_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		inner_v.add_child(play_lbl)
+		cta_panel.add_child(play_lbl)
+		right_v.add_child(cta_panel)
 
-		card_btn.add_child(inner_v)
 		var deck_idx = i
 		card_btn.pressed.connect(func():
 			if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
@@ -262,13 +352,14 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 
 	var cancel_btn = Button.new()
 	cancel_btn.text = "✖ Cancel"
-	cancel_btn.custom_minimum_size = Vector2(160, 36)
+	cancel_btn.custom_minimum_size = Vector2(160, 34)
 	cancel_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	cancel_btn.pressed.connect(func():
 		if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
 		modal.queue_free()
 	)
 	vbox.add_child(cancel_btn)
+
 
 func _on_pack_opening_pressed() -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
