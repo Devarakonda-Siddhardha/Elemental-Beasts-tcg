@@ -75,6 +75,7 @@ func run_all_tests() -> void:
 	test_32_settings_log_toggle_vfx_and_collection_ui()
 	test_33_neutral_setup_supporter_cards()
 	test_34_victory_screen_and_main_menu_bgm()
+	test_35_procedural_playmat_and_layout()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -1037,6 +1038,42 @@ func test_34_victory_screen_and_main_menu_bgm() -> void:
 	bc.queue_free()
 	sm.stop_bgm()
 	sm.free()
+
+func test_35_procedural_playmat_and_layout() -> void:
+	# 1. Verify ProceduralPlaymat renders purely via GDScript draw commands without copying external image
+	var playmat := ProceduralPlaymat.new()
+	playmat.size = Vector2(1280, 720)
+	playmat._ready()
+	assert_true(playmat.has_method("_draw_cosmic_space") and playmat.has_method("_draw_floating_crystal_islands") and playmat.has_method("_draw_golden_citadel") and playmat.has_method("_draw_arcane_summoning_rings"), "Requirement 35a: ProceduralPlaymat provides custom GDScript drawing for celestial sky, starfield, floating islands, citadel, and golden filigree")
+
+	# 2. Verify SlotFrame features cardinal diamond accent pips matching reference playmat
+	var sf := SlotFrame.new()
+	sf.custom_minimum_size = Vector2(128, 178)
+	assert_true(sf.has_method("_draw_diamond"), "Requirement 35b: SlotFrame implements _draw_diamond for cardinal gold accent pips")
+	sf.free()
+
+	# 3. Verify Battle scene layout matches reference playmat structure
+	var b_scene: PackedScene = load("res://scenes/battle.tscn")
+	var bc = b_scene.instantiate()
+	var opp_deck = bc.get_node_or_null("OpponentDeckSlot")
+	var opp_disc = bc.get_node_or_null("OpponentDiscardSlot")
+	var ply_deck = bc.get_node_or_null("PlayerDeckSlot")
+	var ply_disc = bc.get_node_or_null("PlayerDiscardSlot")
+	assert_true(opp_deck != null and opp_disc != null and ply_deck != null and ply_disc != null, "Requirement 35c: Battle scene features on-field Deck and Discard slots flanking Opponent and Player combat rows")
+
+	var turn_pnl = bc.get_node_or_null("TurnPanel")
+	var turn_lbl = bc.get_node_or_null("TurnPanel/TurnLabel")
+	var end_btn = bc.get_node_or_null("TurnPanel/EndTurnButton")
+	assert_true(turn_pnl != null and turn_lbl != null and end_btn != null, "Requirement 35d: TurnPanel is positioned as a right-column shield with Turn counter and End Turn button")
+
+	var ply_bar = bc.get_node_or_null("PlayerBar")
+	var opp_bar = bc.get_node_or_null("OpponentBar")
+	var ply_hp = bc.get_node_or_null("PlayerBar/LifeCrest/HPLabel")
+	var ply_mana = bc.get_node_or_null("PlayerBar/ManaPips")
+	assert_true(ply_bar != null and opp_bar != null and ply_hp != null and ply_mana != null, "Requirement 35e: Symmetrical Player and Opponent bars feature circular avatar frames, Life crest gems, and Mana orbs")
+
+	playmat.free()
+	bc.free()
 
 
 

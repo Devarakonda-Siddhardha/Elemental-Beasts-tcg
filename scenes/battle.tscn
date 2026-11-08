@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://cxkjv38pm15y"]
+[gd_scene load_steps=22 format=3 uid="uid://cxkjv38pm15y"]
 
 [ext_resource type="Script" path="res://scripts/ui/battle_controller.gd" id="1_battle"]
 [ext_resource type="Script" path="res://scripts/ui/procedural_playmat.gd" id="2_playmat"]
@@ -7,19 +7,157 @@
 [ext_resource type="Texture2D" path="res://assets/art/shadow_dragon.jpg" id="5_opp_avatar"]
 [ext_resource type="Texture2D" path="res://assets/art/little_dragon.jpg" id="6_ply_avatar"]
 
-[sub_resource type="StyleBoxFlat" id="SB_gold_panel"]
-bg_color = Color(0.09, 0.04, 0.16, 0.9)
+[sub_resource type="StyleBoxFlat" id="SB_pill_bar"]
+bg_color = Color(0.08, 0.05, 0.2, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.92, 0.74, 0.3, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0, 0, 0, 0.75)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_avatar_circle"]
+bg_color = Color(0.12, 0.06, 0.24, 1)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.95, 0.8, 0.35, 1)
+corner_radius_top_left = 44
+corner_radius_top_right = 44
+corner_radius_bottom_right = 44
+corner_radius_bottom_left = 44
+shadow_color = Color(0.65, 0.25, 0.85, 0.45)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="SB_life_gem"]
+bg_color = Color(0.62, 0.07, 0.1, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.95, 0.82, 0.35, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+shadow_color = Color(0.95, 0.15, 0.2, 0.55)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_mana_gem"]
+bg_color = Color(0.06, 0.36, 0.82, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.95, 0.82, 0.35, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+shadow_color = Color(0.15, 0.65, 1, 0.65)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_stone_cartouche"]
+bg_color = Color(0.08, 0.04, 0.18, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.92, 0.74, 0.3, 1)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(0, 0, 0, 0.7)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_turn_shield"]
+bg_color = Color(0.12, 0.05, 0.22, 0.96)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.92, 0.74, 0.32, 1)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(0.55, 0.18, 0.75, 0.4)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="SB_endturn"]
+bg_color = Color(0.85, 0.52, 0.08, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.92, 0.5, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(1, 0.72, 0.18, 0.6)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="SB_endturn_hover"]
+bg_color = Color(0.96, 0.64, 0.12, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 0.75, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(1, 0.85, 0.3, 0.8)
+shadow_size = 16
+
+[sub_resource type="StyleBoxFlat" id="SB_endturn_disabled"]
+bg_color = Color(0.24, 0.2, 0.18, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.5, 0.45, 0.35, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxFlat" id="SB_deck_frame"]
+bg_color = Color(0.08, 0.05, 0.16, 0.92)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.88, 0.68, 0.28, 1)
+border_color = Color(0.88, 0.7, 0.3, 0.9)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
-shadow_color = Color(0, 0, 0, 0.55)
-shadow_size = 6
+shadow_color = Color(0, 0, 0, 0.8)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="SB_discard_frame"]
+bg_color = Color(0.08, 0.05, 0.16, 0.75)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.88, 0.7, 0.3, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0.8, 0.4, 0.15, 0.3)
+shadow_size = 8
 
 [sub_resource type="StyleBoxFlat" id="SB_banner"]
 content_margin_left = 18.0
@@ -39,83 +177,19 @@ corner_radius_bottom_left = 12
 shadow_color = Color(1, 0.6, 0.2, 0.25)
 shadow_size = 6
 
-[sub_resource type="StyleBoxFlat" id="SB_life"]
-bg_color = Color(0.55, 0.05, 0.08, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.95, 0.75, 0.3, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 30
-corner_radius_bottom_left = 30
-shadow_color = Color(0, 0, 0, 0.6)
-shadow_size = 4
-
-[sub_resource type="StyleBoxFlat" id="SB_avatar"]
-bg_color = Color(0.1, 0.05, 0.2, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.92, 0.72, 0.3, 1)
-corner_radius_top_left = 40
-corner_radius_top_right = 40
-corner_radius_bottom_right = 40
-corner_radius_bottom_left = 40
-
-[sub_resource type="StyleBoxFlat" id="SB_endturn"]
-bg_color = Color(0.62, 0.38, 0.08, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(1, 0.86, 0.45, 1)
-corner_radius_top_left = 22
-corner_radius_top_right = 22
-corner_radius_bottom_right = 22
-corner_radius_bottom_left = 22
-shadow_color = Color(1, 0.7, 0.2, 0.4)
-shadow_size = 8
-
-[sub_resource type="StyleBoxFlat" id="SB_endturn_hover"]
-bg_color = Color(0.78, 0.5, 0.12, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(1, 0.95, 0.65, 1)
-corner_radius_top_left = 22
-corner_radius_top_right = 22
-corner_radius_bottom_right = 22
-corner_radius_bottom_left = 22
-shadow_color = Color(1, 0.8, 0.3, 0.6)
-shadow_size = 12
-
-[sub_resource type="StyleBoxFlat" id="SB_endturn_disabled"]
-bg_color = Color(0.25, 0.2, 0.18, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.5, 0.45, 0.35, 1)
-corner_radius_top_left = 22
-corner_radius_top_right = 22
-corner_radius_bottom_right = 22
-corner_radius_bottom_left = 22
-
-[sub_resource type="StyleBoxFlat" id="SB_cell"]
-bg_color = Color(0.05, 0.03, 0.1, 0.85)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.7, 0.55, 0.25, 0.8)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+[sub_resource type="StyleBoxFlat" id="SB_gold_panel"]
+bg_color = Color(0.09, 0.04, 0.16, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.88, 0.68, 0.28, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.55)
+shadow_size = 6
 
 [node name="Battle" type="Control"]
 layout_mode = 3
@@ -141,145 +215,33 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -128.0
-offset_top = 2.0
-offset_right = 172.0
-offset_bottom = 96.0
+offset_left = -170.0
+offset_top = 8.0
+offset_right = 170.0
+offset_bottom = 98.0
 grow_horizontal = 2
 mouse_filter = 2
 texture = ExtResource("4_logo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="OpponentBanner" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -118.0
-offset_top = 98.0
-offset_right = 162.0
-offset_bottom = 122.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
-theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("SB_banner")
-text = "OPPONENT'S BATTLEFIELD  (Max 4)"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="OpponentField" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -261.0
-offset_top = 128.0
-offset_right = 305.0
-offset_bottom = 306.0
-grow_horizontal = 2
-
-[node name="SlotFrames" type="HBoxContainer" parent="OpponentField"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-theme_override_constants/separation = 18
-
-[node name="BeastSlots" type="HBoxContainer" parent="OpponentField"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-theme_override_constants/separation = 18
-
-[node name="PlayerBanner" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -98.0
-offset_top = 314.0
-offset_right = 142.0
-offset_bottom = 338.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
-theme_override_font_sizes/font_size = 12
-theme_override_styles/normal = SubResource("SB_banner")
-text = "YOUR BATTLEFIELD  (Max 4)"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="PlayerField" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -261.0
-offset_top = 344.0
-offset_right = 305.0
-offset_bottom = 522.0
-grow_horizontal = 2
-
-[node name="SlotFrames" type="HBoxContainer" parent="PlayerField"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-theme_override_constants/separation = 18
-
-[node name="BeastSlots" type="HBoxContainer" parent="PlayerField"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-theme_override_constants/separation = 18
-
-[node name="HandArea" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -350.0
-offset_top = -186.0
-offset_right = 350.0
-offset_bottom = -6.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="HandContainer" type="HBoxContainer" parent="HandArea"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-theme_override_constants/separation = -18
-alignment = 1
-
 [node name="OpponentBar" type="Panel" parent="."]
 layout_mode = 0
-offset_left = 8.0
-offset_top = 8.0
-offset_right = 360.0
-offset_bottom = 88.0
-theme_override_styles/panel = SubResource("SB_gold_panel")
+offset_left = 24.0
+offset_top = 18.0
+offset_right = 320.0
+offset_bottom = 118.0
+theme_override_styles/panel = SubResource("SB_pill_bar")
 
 [node name="Avatar" type="Panel" parent="OpponentBar"]
 clip_children = 2
 layout_mode = 0
 offset_left = 6.0
-offset_top = 4.0
-offset_right = 78.0
-offset_bottom = 76.0
+offset_top = 6.0
+offset_right = 94.0
+offset_bottom = 94.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("SB_avatar")
+theme_override_styles/panel = SubResource("SB_avatar_circle")
 
 [node name="Tex" type="TextureRect" parent="OpponentBar/Avatar"]
 layout_mode = 1
@@ -293,86 +255,184 @@ stretch_mode = 6
 
 [node name="Title" type="Label" parent="OpponentBar"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 6.0
-offset_right = 346.0
-offset_bottom = 26.0
-theme_override_colors/font_color = Color(1, 0.88, 0.6, 1)
+offset_left = 104.0
+offset_top = 8.0
+offset_right = 290.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
 theme_override_font_sizes/font_size = 13
-text = "OPPONENT (AI)"
+text = "OPPONENT"
+horizontal_alignment = 1
 
 [node name="LifeCrest" type="Panel" parent="OpponentBar"]
 layout_mode = 0
-offset_left = 84.0
-offset_top = 4.0
-offset_right = 142.0
-offset_bottom = 76.0
+offset_left = 114.0
+offset_top = 34.0
+offset_right = 172.0
+offset_bottom = 92.0
 mouse_filter = 2
-theme_override_styles/panel = SubResource("SB_life")
+theme_override_styles/panel = SubResource("SB_life_gem")
 
-[node name="LifeTitle" type="Label" parent="OpponentBar/LifeCrest"]
+[node name="HPLabel" type="Label" parent="OpponentBar/LifeCrest"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_top = 4.0
-offset_bottom = 20.0
-theme_override_colors/font_color = Color(1, 0.9, 0.7, 1)
-theme_override_font_sizes/font_size = 10
-text = "LIFE"
-horizontal_alignment = 1
-
-[node name="HPLabel" type="Label" parent="OpponentBar/LifeCrest"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 16.0
+offset_bottom = 36.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
 text = "30"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="LifeTitle" type="Label" parent="OpponentBar/LifeCrest"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -18.0
+offset_bottom = -3.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "LIFE"
+horizontal_alignment = 1
+
 [node name="ManaLabel" type="Label" parent="OpponentBar"]
+visible = false
 layout_mode = 0
-offset_left = 150.0
-offset_top = 28.0
-offset_right = 346.0
-offset_bottom = 46.0
-theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = "MANA 5/5"
+offset_left = 184.0
+offset_top = 34.0
+offset_right = 242.0
+offset_bottom = 50.0
+text = "MANA"
 
 [node name="ManaPips" type="HBoxContainer" parent="OpponentBar"]
 layout_mode = 0
-offset_left = 150.0
-offset_top = 50.0
-offset_right = 346.0
-offset_bottom = 72.0
+offset_left = 184.0
+offset_top = 34.0
+offset_right = 242.0
+offset_bottom = 92.0
 mouse_filter = 2
-theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PlayerBar" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -118.0
+offset_right = 320.0
+offset_bottom = -18.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("SB_pill_bar")
+
+[node name="Avatar" type="Panel" parent="PlayerBar"]
+clip_children = 2
+layout_mode = 0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 94.0
+offset_bottom = 94.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_avatar_circle")
+
+[node name="Tex" type="TextureRect" parent="PlayerBar/Avatar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+texture = ExtResource("6_ply_avatar")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Title" type="Label" parent="PlayerBar"]
+layout_mode = 0
+offset_left = 104.0
+offset_top = 8.0
+offset_right = 290.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 13
+text = "PLAYER"
+horizontal_alignment = 1
+
+[node name="LifeCrest" type="Panel" parent="PlayerBar"]
+layout_mode = 0
+offset_left = 114.0
+offset_top = 34.0
+offset_right = 172.0
+offset_bottom = 92.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_life_gem")
+
+[node name="HPLabel" type="Label" parent="PlayerBar/LifeCrest"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 4.0
+offset_bottom = 36.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 22
+text = "30"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LifeTitle" type="Label" parent="PlayerBar/LifeCrest"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -18.0
+offset_bottom = -3.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 10
+text = "LIFE"
+horizontal_alignment = 1
+
+[node name="ManaLabel" type="Label" parent="PlayerBar"]
+visible = false
+layout_mode = 0
+offset_left = 184.0
+offset_top = 34.0
+offset_right = 242.0
+offset_bottom = 50.0
+text = "MANA"
+
+[node name="ManaPips" type="HBoxContainer" parent="PlayerBar"]
+layout_mode = 0
+offset_left = 184.0
+offset_top = 34.0
+offset_right = 242.0
+offset_bottom = 92.0
+mouse_filter = 2
+alignment = 1
 
 [node name="OpponentStonePanel" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -384.0
-offset_top = 8.0
-offset_right = -104.0
-offset_bottom = 92.0
+offset_left = -390.0
+offset_top = 18.0
+offset_right = -24.0
+offset_bottom = 112.0
 grow_horizontal = 0
-theme_override_styles/panel = SubResource("SB_gold_panel")
+theme_override_styles/panel = SubResource("SB_stone_cartouche")
 
 [node name="Title" type="Label" parent="OpponentStonePanel"]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_top = 3.0
-offset_bottom = 19.0
+offset_top = 8.0
+offset_bottom = 26.0
 theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 12
 text = "OPPONENT STONE PILE"
 horizontal_alignment = 1
 
@@ -381,11 +441,338 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 6.0
+offset_left = 10.0
+offset_top = 28.0
+offset_right = -10.0
+offset_bottom = -6.0
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="PlayerStonePanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -390.0
+offset_top = -112.0
+offset_right = -24.0
+offset_bottom = -18.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("SB_stone_cartouche")
+
+[node name="Title" type="Label" parent="PlayerStonePanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 8.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 12
+text = "PLAYER STONE PILE"
+horizontal_alignment = 1
+
+[node name="StonesContainer" type="HBoxContainer" parent="PlayerStonePanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 28.0
+offset_right = -10.0
+offset_bottom = -6.0
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="TurnPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -195.0
+offset_top = 210.0
+offset_right = -25.0
+offset_bottom = 430.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("SB_turn_shield")
+
+[node name="TurnLabel" type="Label" parent="TurnPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
 offset_top = 20.0
-offset_right = -6.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_font_sizes/font_size = 22
+text = "TURN 1"
+horizontal_alignment = 1
+
+[node name="ActivePlayerLabel" type="Label" parent="TurnPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 54.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(0.3, 1, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+text = "YOUR TURN"
+horizontal_alignment = 1
+
+[node name="EndTurnButton" type="Button" parent="TurnPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 14.0
+offset_top = 92.0
+offset_right = -14.0
+offset_bottom = 152.0
+theme_override_colors/font_color = Color(1, 0.96, 0.85, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("SB_endturn")
+theme_override_styles/hover = SubResource("SB_endturn_hover")
+theme_override_styles/pressed = SubResource("SB_endturn_hover")
+theme_override_styles/disabled = SubResource("SB_endturn_disabled")
+text = "End Turn"
+
+[node name="OpponentDeckSlot" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -395.0
+offset_top = 138.0
+offset_right = -285.0
+offset_bottom = 308.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("SB_deck_frame")
+
+[node name="CardBack" type="TextureRect" parent="OpponentDeckSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
 offset_bottom = -4.0
-theme_override_constants/separation = 2
+mouse_filter = 2
+texture = ExtResource("3_cardback")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="CountBadge" type="Label" parent="OpponentDeckSlot"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+theme_override_colors/font_color = Color(1, 0.95, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "❖ 34"
+horizontal_alignment = 1
+
+[node name="OpponentField" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -265.0
+offset_top = 138.0
+offset_right = 265.0
+offset_bottom = 308.0
+grow_horizontal = 2
+
+[node name="SlotFrames" type="HBoxContainer" parent="OpponentField"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="BeastSlots" type="HBoxContainer" parent="OpponentField"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="OpponentDiscardSlot" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 285.0
+offset_top = 138.0
+offset_right = 395.0
+offset_bottom = 308.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("SB_discard_frame")
+
+[node name="Icon" type="Label" parent="OpponentDiscardSlot"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -30.0
+offset_top = -30.0
+offset_right = 30.0
+offset_bottom = 10.0
+theme_override_colors/font_color = Color(0.85, 0.7, 0.4, 0.8)
+theme_override_font_sizes/font_size = 32
+text = "🗑"
+horizontal_alignment = 1
+
+[node name="CountBadge" type="Label" parent="OpponentDiscardSlot"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+theme_override_colors/font_color = Color(1, 0.85, 0.6, 1)
+theme_override_font_sizes/font_size = 13
+text = "✖ 0"
+horizontal_alignment = 1
+
+[node name="PlayerDeckSlot" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -395.0
+offset_top = 338.0
+offset_right = -285.0
+offset_bottom = 508.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("SB_deck_frame")
+
+[node name="CardBack" type="TextureRect" parent="PlayerDeckSlot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+mouse_filter = 2
+texture = ExtResource("3_cardback")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="CountBadge" type="Label" parent="PlayerDeckSlot"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+theme_override_colors/font_color = Color(1, 0.95, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "❖ 34"
+horizontal_alignment = 1
+
+[node name="PlayerField" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -265.0
+offset_top = 338.0
+offset_right = 265.0
+offset_bottom = 508.0
+grow_horizontal = 2
+
+[node name="SlotFrames" type="HBoxContainer" parent="PlayerField"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="BeastSlots" type="HBoxContainer" parent="PlayerField"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="PlayerDiscardSlot" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 285.0
+offset_top = 338.0
+offset_right = 395.0
+offset_bottom = 508.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("SB_discard_frame")
+
+[node name="Icon" type="Label" parent="PlayerDiscardSlot"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -30.0
+offset_top = -30.0
+offset_right = 30.0
+offset_bottom = 10.0
+theme_override_colors/font_color = Color(0.85, 0.7, 0.4, 0.8)
+theme_override_font_sizes/font_size = 32
+text = "🗑"
+horizontal_alignment = 1
+
+[node name="CountBadge" type="Label" parent="PlayerDiscardSlot"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -24.0
+theme_override_colors/font_color = Color(1, 0.85, 0.6, 1)
+theme_override_font_sizes/font_size = 13
+text = "✖ 0"
+horizontal_alignment = 1
+
+[node name="HandArea" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -185.0
+offset_right = 360.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="HandContainer" type="HBoxContainer" parent="HandArea"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/separation = -14
 alignment = 1
 
 [node name="LegacyToggle" type="Button" parent="."]
@@ -426,23 +813,13 @@ theme_override_styles/pressed = SubResource("SB_endturn")
 text = "☰"
 
 [node name="SelectedPanel" type="Panel" parent="."]
+visible = false
 layout_mode = 0
 offset_left = 8.0
 offset_top = 96.0
 offset_right = 268.0
 offset_bottom = 452.0
 theme_override_styles/panel = SubResource("SB_gold_panel")
-
-[node name="Title" type="Label" parent="SelectedPanel"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 4.0
-offset_bottom = 22.0
-theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
-theme_override_font_sizes/font_size = 12
-text = "SELECTED CARD"
-horizontal_alignment = 1
 
 [node name="PreviewHolder" type="Control" parent="SelectedPanel"]
 layout_mode = 0
@@ -465,180 +842,29 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="PilesPanel" type="Panel" parent="."]
+visible = false
 layout_mode = 0
-offset_left = 8.0
-offset_top = 458.0
-offset_right = 268.0
-offset_bottom = 626.0
-theme_override_styles/panel = SubResource("SB_gold_panel")
+offset_left = -500.0
+offset_top = 0.0
+offset_right = -300.0
+offset_bottom = 150.0
 
 [node name="Grid" type="GridContainer" parent="PilesPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = 8.0
-offset_right = -8.0
-offset_bottom = -8.0
-theme_override_constants/h_separation = 6
-theme_override_constants/v_separation = 6
 columns = 3
-
-[node name="PlayerBar" type="Panel" parent="."]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = -88.0
-offset_right = 360.0
-offset_bottom = -8.0
-grow_vertical = 0
-theme_override_styles/panel = SubResource("SB_gold_panel")
-
-[node name="Avatar" type="Panel" parent="PlayerBar"]
-clip_children = 2
-layout_mode = 0
-offset_left = 6.0
-offset_top = 4.0
-offset_right = 78.0
-offset_bottom = 76.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("SB_avatar")
-
-[node name="Tex" type="TextureRect" parent="PlayerBar/Avatar"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-texture = ExtResource("6_ply_avatar")
-expand_mode = 1
-stretch_mode = 6
-
-[node name="Title" type="Label" parent="PlayerBar"]
-layout_mode = 0
-offset_left = 150.0
-offset_top = 6.0
-offset_right = 346.0
-offset_bottom = 26.0
-theme_override_colors/font_color = Color(0.7, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 13
-text = "PLAYER (YOU)"
-
-[node name="LifeCrest" type="Panel" parent="PlayerBar"]
-layout_mode = 0
-offset_left = 84.0
-offset_top = 4.0
-offset_right = 142.0
-offset_bottom = 76.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("SB_life")
-
-[node name="LifeTitle" type="Label" parent="PlayerBar/LifeCrest"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 4.0
-offset_bottom = 20.0
-theme_override_colors/font_color = Color(1, 0.9, 0.7, 1)
-theme_override_font_sizes/font_size = 10
-text = "LIFE"
-horizontal_alignment = 1
-
-[node name="HPLabel" type="Label" parent="PlayerBar/LifeCrest"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = 16.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 24
-text = "30"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="ManaLabel" type="Label" parent="PlayerBar"]
-layout_mode = 0
-offset_left = 150.0
-offset_top = 28.0
-offset_right = 346.0
-offset_bottom = 46.0
-theme_override_colors/font_color = Color(0.6, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = "MANA 5/5"
-
-[node name="ManaPips" type="HBoxContainer" parent="PlayerBar"]
-layout_mode = 0
-offset_left = 150.0
-offset_top = 50.0
-offset_right = 346.0
-offset_bottom = 72.0
-mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="TurnPanel" type="Panel" parent="."]
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -228.0
-offset_top = 100.0
-offset_right = -8.0
-offset_bottom = 236.0
-grow_horizontal = 0
-theme_override_styles/panel = SubResource("SB_gold_panel")
-
-[node name="TurnLabel" type="Label" parent="TurnPanel"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 8.0
-offset_bottom = 34.0
-theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
-theme_override_font_sizes/font_size = 20
-text = "TURN 1"
-horizontal_alignment = 1
-
-[node name="ActivePlayerLabel" type="Label" parent="TurnPanel"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 38.0
-offset_bottom = 62.0
-theme_override_colors/font_color = Color(0.3, 1, 0.4, 1)
-theme_override_font_sizes/font_size = 17
-text = "YOUR TURN"
-horizontal_alignment = 1
-
-[node name="EndTurnButton" type="Button" parent="TurnPanel"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_left = 14.0
-offset_top = 72.0
-offset_right = -14.0
-offset_bottom = 122.0
-theme_override_colors/font_color = Color(1, 0.96, 0.85, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("SB_endturn")
-theme_override_styles/hover = SubResource("SB_endturn_hover")
-theme_override_styles/pressed = SubResource("SB_endturn_hover")
-theme_override_styles/disabled = SubResource("SB_endturn_disabled")
-text = "End Turn"
 
 [node name="LogPanel" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -228.0
-offset_top = 244.0
-offset_right = -8.0
-offset_bottom = 556.0
+offset_left = -280.0
+offset_top = 120.0
+offset_right = -20.0
+offset_bottom = 540.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("SB_gold_panel")
 
@@ -665,45 +891,6 @@ offset_bottom = -8.0
 theme_override_font_sizes/normal_font_size = 11
 bbcode_enabled = true
 scroll_following = true
-
-
-[node name="PlayerStonePanel" type="Panel" parent="."]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -286.0
-offset_top = -92.0
-offset_right = -8.0
-offset_bottom = -8.0
-grow_horizontal = 0
-grow_vertical = 0
-theme_override_styles/panel = SubResource("SB_gold_panel")
-
-[node name="Title" type="Label" parent="PlayerStonePanel"]
-layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_top = 3.0
-offset_bottom = 19.0
-theme_override_colors/font_color = Color(1, 0.88, 0.55, 1)
-theme_override_font_sizes/font_size = 11
-text = "YOUR STONE PILE"
-horizontal_alignment = 1
-
-[node name="StonesContainer" type="HBoxContainer" parent="PlayerStonePanel"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 6.0
-offset_top = 20.0
-offset_right = -6.0
-offset_bottom = -4.0
-theme_override_constants/separation = 2
-alignment = 1
 
 [node name="PromptBanner" type="Label" parent="."]
 visible = false

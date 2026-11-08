@@ -38,6 +38,7 @@ const ELEMENT_UI_COLORS = {
 var pile_labels: Dictionary = {}
 var pile_cells: Dictionary = {}
 
+@onready var selected_panel: Panel = get_node_or_null("SelectedPanel")
 @onready var preview_holder: Control = $SelectedPanel/PreviewHolder
 var preview_card: CardUI = null
 
@@ -76,19 +77,22 @@ func _ready() -> void:
 	game_state.deck_shuffled.connect(_on_deck_shuffled)
 	game_state.game_ended.connect(_on_game_ended)
 	
-	end_turn_button.pressed.connect(_on_end_turn_pressed)
-	if legacy_toggle_button:
+	if not end_turn_button.pressed.is_connected(_on_end_turn_pressed):
+		end_turn_button.pressed.connect(_on_end_turn_pressed)
+	if legacy_toggle_button and not legacy_toggle_button.toggled.is_connected(_on_legacy_toggle):
 		legacy_toggle_button.toggled.connect(_on_legacy_toggle)
-	if menu_button:
+	if menu_button and not menu_button.pressed.is_connected(_on_menu_pressed):
 		menu_button.pressed.connect(_on_menu_pressed)
 		
-	if opponent_panel:
+	if opponent_panel and not opponent_panel.gui_input.is_connected(_on_opponent_panel_input):
 		opponent_panel.gui_input.connect(_on_opponent_panel_input)
 	var opp_field = $OpponentField
-	if opp_field:
+	if opp_field and not opp_field.gui_input.is_connected(_on_opponent_panel_input):
 		opp_field.gui_input.connect(_on_opponent_panel_input)
 		
 	_build_static_ui()
+	if log_panel:
+		log_panel.visible = false
 	
 	var player_deck = GameState.load_starter_deck_ids_by_index(selected_starter_deck_index)
 	var ai_deck_idx = (selected_starter_deck_index + 3) % 6
@@ -171,6 +175,17 @@ func _build_static_ui() -> void:
 							open_deck_search_modal("✦ YOUR DISCARD PILE ✦", game_state.get_discard(0), Callable(), false)
 				)
 
+	# Connect On-Field Deck and Discard Slots matching reference playmat
+	var p_deck = get_node_or_null("PlayerDeckSlot")
+	if p_deck and not p_deck.gui_input.is_connected(self._on_player_deck_input):
+		p_deck.gui_input.connect(self._on_player_deck_input)
+	var p_disc = get_node_or_null("PlayerDiscardSlot")
+	if p_disc and not p_disc.gui_input.is_connected(self._on_player_discard_input):
+		p_disc.gui_input.connect(self._on_player_discard_input)
+	var op_disc = get_node_or_null("OpponentDiscardSlot")
+	if op_disc and not op_disc.gui_input.is_connected(self._on_opponent_discard_input):
+		op_disc.gui_input.connect(self._on_opponent_discard_input)
+
 	# Build Top-Right Utility Buttons: Audio Settings (🔊) & Battle Log Toggle (📜)
 	_setup_utility_and_log_controls()
 
@@ -240,6 +255,24 @@ func _toggle_battle_log() -> void:
 		get_node("/root/SoundManager").play_ui_click()
 	if log_panel:
 		log_panel.visible = not log_panel.visible
+
+func _on_player_deck_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
+		open_deck_search_modal("✦ YOUR REMAINING DECK (SHUFFLED VIEW) ✦", game_state.get_deck(0), Callable(), true)
+
+func _on_player_discard_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
+		open_deck_search_modal("✦ YOUR DISCARD PILE ✦", game_state.get_discard(0), Callable(), false)
+
+func _on_opponent_discard_input(ev: InputEvent) -> void:
+	if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
+		open_deck_search_modal("✦ OPPONENT'S DISCARD PILE ✦", game_state.get_discard(1), Callable(), false)
 
 func _update_mana_pips(container: HBoxContainer, current: int) -> void:
 	# Render a single glowing sapphire Mana Symbol Crest with the current Mana number inside it (e.g., "5")
@@ -323,7 +356,6 @@ func update_hud() -> void:
 	player_hp_label.text = str(p_hp)
 	var p_mana = game_state.get_mana(0).current_mana
 	player_mana_label.visible = false
-	player_mana_pips.position = Vector2(150, 26)
 	_update_mana_pips(player_mana_pips, p_mana)
 	refresh_stones_display(0, player_stones_container)
 
@@ -331,7 +363,6 @@ func update_hud() -> void:
 	opponent_hp_label.text = str(op_hp)
 	var op_mana = game_state.get_mana(1).current_mana
 	opponent_mana_label.visible = false
-	opponent_mana_pips.position = Vector2(150, 26)
 	_update_mana_pips(opponent_mana_pips, op_mana)
 	refresh_stones_display(1, opponent_stones_container)
 
@@ -342,6 +373,20 @@ func update_hud() -> void:
 		pile_labels["enemy_Deck"].text = "❖ " + str(game_state.player_decks[1].size())
 		pile_labels["enemy_Discard"].text = "✖ " + str(game_state.player_discards[1].size())
 		pile_labels["enemy_Banish"].text = "✦ 0"
+
+	# Update On-Field Deck and Discard Slot Badges matching reference playmat
+	var p_deck_badge: Label = get_node_or_null("PlayerDeckSlot/CountBadge")
+	if p_deck_badge:
+		p_deck_badge.text = "❖ " + str(game_state.player_decks[0].size())
+	var p_disc_badge: Label = get_node_or_null("PlayerDiscardSlot/CountBadge")
+	if p_disc_badge:
+		p_disc_badge.text = "✖ " + str(game_state.player_discards[0].size())
+	var op_deck_badge: Label = get_node_or_null("OpponentDeckSlot/CountBadge")
+	if op_deck_badge:
+		op_deck_badge.text = "❖ " + str(game_state.player_decks[1].size())
+	var op_disc_badge: Label = get_node_or_null("OpponentDiscardSlot/CountBadge")
+	if op_disc_badge:
+		op_disc_badge.text = "✖ " + str(game_state.player_discards[1].size())
 
 	turn_label.text = "TURN " + str(game_state.turn_number)
 	if game_state.active_player_id == 0:
@@ -438,7 +483,11 @@ func _wrap_card(card_ui: CardUI, s: float) -> Control:
 
 func _on_any_card_hovered(card_ui: CardUI, is_hovered: bool) -> void:
 	if not is_hovered or card_ui == null or card_ui.card_data == null:
+		if selected_panel and selected_panel.visible:
+			selected_panel.visible = false
 		return
+	if selected_panel:
+		selected_panel.visible = true
 	if preview_card == null:
 		preview_card = card_ui_prefab.instantiate()
 		preview_card.hover_zoom = false
