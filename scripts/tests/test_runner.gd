@@ -1112,15 +1112,25 @@ func test_36_card_reworks_and_new_supporters_spells() -> void:
 	enemy_target.turn_refresh()
 	assert_true(enemy_target.freeze_turns == 0, "Requirement 36d: Glacial Freeze is temporary and wears off after 1 turn")
 
-	# 4. Mechanical Dragon: Immune to spells + activated ability discard stone to draw 2 cards
+	# 4. Shadow Dragon (immune to spells) vs Mechanical Dragon (NOT immune to spells, has Overclock Draw)
 	var state_mech = GameState.new()
 	state_mech.start_game()
 	var mech_beast = BeastInstance.create(state_mech.card_db["mechanical_dragon"], 0, 0)
 	state_mech.player_fields[0].append(mech_beast)
-	assert_true(mech_beast.is_immune_to_spells(), "Requirement 36e: Mechanical Dragon has passive immunity to all Spell cards")
+	assert_true(not mech_beast.is_immune_to_spells(), "Requirement 36e: Mechanical Dragon is NOT immune to spells")
+	
+	var shadow_beast = BeastInstance.create(state_mech.card_db["shadow_dragon"], 1, 0)
+	state_mech.player_fields[1].append(shadow_beast)
+	assert_true(shadow_beast.is_immune_to_spells(), "Requirement 36e2: Shadow Dragon has passive Cloak of Darkness (immune to spells)")
+	
 	state_mech.player_hands[0] = [state_mech.card_db["lightning_strike"]]
-	var spell_res = state_mech.cast_spell(0, 0, mech_beast)
-	assert_true(not spell_res.success, "Requirement 36f: Spells targeting Mechanical Dragon fail due to spell immunity")
+	var shadow_spell_res = state_mech.cast_spell(0, 0, shadow_beast)
+	assert_true(not shadow_spell_res.success, "Requirement 36f: Spells targeting Shadow Dragon fail due to spell immunity")
+
+	# Spells can target Mechanical Dragon
+	state_mech.player_hands[0] = [state_mech.card_db["lightning_strike"]]
+	var mech_spell_res = state_mech.cast_spell(0, 0, mech_beast)
+	assert_true(mech_spell_res.success, "Requirement 36f2: Spells can target Mechanical Dragon (not immune to spells)")
 
 	# Test Mechanical Dragon Overclock Draw
 	state_mech.player_hands[0] = []

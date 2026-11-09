@@ -162,7 +162,7 @@ func _get_symbolic_effect_text() -> String:
 		"fire_dragon": return "🔥 On Evolve: +3 ATK that turn"
 		"lightning_dragon": return "⚡◈ -1 ➔ ⚡ Paralysis (Coin Flip)"
 		"ice_dragon": return "❄ On Evolve: Freeze 1 Enemy (1T)"
-		"mechanical_dragon": return "⚙ Discard 1 Stone ➔ +2 Cards  •  ☾ Spell Immune"
+		"mechanical_dragon": return "⚙ Discard 1 Stone ➔ +2 Cards"
 		"water_dragon": return "◈ -1 ➔ ♥ +5 HP"
 		"volcovolt_dragon": return "☀⚡◈ -1 each ➔ ⚔ 8 (×2) + ⚡ Stun"
 		"spark_wraith_dragon": return "☾⚡◈ -1 each ➔ ❖ Recover 2 Spells"

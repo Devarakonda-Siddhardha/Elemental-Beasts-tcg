@@ -184,18 +184,17 @@
       "attack": 6,
       "ability": {
         "name": "Overclock Draw",
-        "description": "Discard 1 Stone from hand (or Stone Pile) to draw 2 cards. Passive: Immune to Spells.",
+        "description": "Discard 1 Stone from hand (or Stone Pile) to draw 2 cards.",
         "trigger": "activated",
         "cost": {
           "any_stone": 1
         },
-        "effect": "discard_stone_draw_two",
-        "spell_immunity": true
+        "effect": "discard_stone_draw_two"
       },
       "evolution_stage": 1,
       "evolves_from": "little_dragon",
       "status": "PROVISIONAL",
-      "description": "Discard 1 Stone to draw 2 cards. Immune to Spells."
+      "description": "Discard 1 Stone from hand (or Stone Pile) to draw 2 cards."
     },
     {
       "id": "water_dragon",

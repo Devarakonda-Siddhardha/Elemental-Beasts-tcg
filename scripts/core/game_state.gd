@@ -878,7 +878,7 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 	if card.card_type != "spell":
 		return {"success": false, "error": "Card is not a spell"}
 		
-	# Check Spell Immunity (Mechanical Dragon / Shadow Dragon)
+	# Check Spell Immunity (Shadow Dragon)
 	if target_beast and target_beast.is_immune_to_spells():
 		return {"success": false, "error": target_beast.card_data.name + " is immune to all Spell cards!"}
 		

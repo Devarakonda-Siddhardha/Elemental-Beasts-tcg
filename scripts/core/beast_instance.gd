@@ -47,10 +47,10 @@ func get_attack() -> int:
 func is_immune_to_spells() -> bool:
 	if not card_data:
 		return false
-	if card_data.id == "mechanical_dragon" or card_data.id == "shadow_dragon":
+	if card_data.id == "shadow_dragon" or card_data.id == "transcendent_shadow_dragon":
 		return true
 	if card_data.ability:
-		if card_data.ability.get("spell_immunity", false) == true or card_data.ability.get("effect") == "spell_immunity":
+		if card_data.ability.get("spell_immunity", false) == true or card_data.ability.get("effect") == "spell_immunity" or card_data.ability.get("effect") == "direct_pierce_spell_immunity":
 			return true
 	return false
 
