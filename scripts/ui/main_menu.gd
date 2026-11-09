@@ -8,13 +8,8 @@ extends Control
 @onready var deck_builder_button: Button = $VBoxContainer/DeckBuilderButton
 @onready var test_suite_button: Button = $VBoxContainer/TestSuiteButton
 @onready var quit_button: Button = $VBoxContainer/QuitButton
-@onready var floating_pack_widget: Control = get_node_or_null("FloatingPackWidget")
-@onready var floating_pack_button: TextureButton = get_node_or_null("FloatingPackWidget/FloatingPackButton")
 
-var _bob_time: float = 0.0
-var _floating_base_y: float = 500.0
 var _toast_panel: PanelContainer = null
-static var _welcome_played: bool = false
 var _portal_frames: Array[Texture2D] = []
 var _portal_frame_timer: float = 0.0
 var _portal_frame_idx: int = 0
@@ -26,11 +21,6 @@ func _ready() -> void:
 		var sm = get_node("/root/SoundManager")
 		if sm.has_method("play_bgm"):
 			sm.play_bgm("main_menu_theme")
-		if not _welcome_played:
-			_welcome_played = true
-			if sm.has_method("play_voice"):
-				sm.play_voice("vo_welcome")
-
 
 	vs_ai_button.pressed.connect(_on_vs_ai_pressed)
 	pvp_button.pressed.connect(_on_pvp_pressed)
@@ -40,13 +30,6 @@ func _ready() -> void:
 	collection_button.pressed.connect(_on_collection_pressed)
 	test_suite_button.pressed.connect(_on_test_suite_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
-
-	if floating_pack_widget:
-		_floating_base_y = floating_pack_widget.position.y
-	if floating_pack_button:
-		floating_pack_button.pressed.connect(_on_pack_opening_pressed)
-		floating_pack_button.mouse_entered.connect(_on_floating_pack_hover.bind(true))
-		floating_pack_button.mouse_exited.connect(_on_floating_pack_hover.bind(false))
 
 	# Setup subtle hover scale/glow feedback on all menu buttons
 	var menu_buttons: Array[Button] = [
@@ -76,9 +59,6 @@ func _load_animated_portal_frames() -> void:
 		background_rect.texture = _portal_frames[0]
 
 func _process(delta: float) -> void:
-	if floating_pack_widget:
-		_bob_time += delta * 2.6
-		floating_pack_widget.position.y = _floating_base_y + sin(_bob_time) * 6.0
 	if _portal_frames.size() > 1 and background_rect:
 		_portal_frame_timer += delta
 		if _portal_frame_timer >= 0.09:
@@ -101,21 +81,6 @@ func _on_button_hover(btn: Button, is_hovered: bool) -> void:
 	else:
 		tw.tween_property(btn, "scale", Vector2.ONE, 0.14)
 		tw.parallel().tween_property(btn, "modulate", Color.WHITE, 0.14)
-
-func _on_floating_pack_hover(is_hovered: bool) -> void:
-	if not floating_pack_widget:
-		return
-	if is_hovered and has_node("/root/SoundManager"):
-		var sm = get_node("/root/SoundManager")
-		if sm.has_method("play_card_hover"):
-			sm.play_card_hover()
-	var tw = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	if is_hovered:
-		tw.tween_property(floating_pack_widget, "scale", Vector2(1.1, 1.1), 0.16)
-		tw.parallel().tween_property(floating_pack_widget, "modulate", Color(1.18, 1.15, 1.22, 1.0), 0.16)
-	else:
-		tw.tween_property(floating_pack_widget, "scale", Vector2.ONE, 0.16)
-		tw.parallel().tween_property(floating_pack_widget, "modulate", Color.WHITE, 0.16)
 
 func _on_vs_ai_pressed() -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()

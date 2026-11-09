@@ -377,8 +377,10 @@ func _apply_frame_layout() -> void:
 			else:
 				name_label.add_theme_font_size_override("font_size", 11)
 			name_label.add_theme_color_override("font_color", light_ink)
-			name_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
-			name_label.add_theme_constant_override("shadow_outline_size", 4)
+			name_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.70))
+			name_label.add_theme_constant_override("shadow_offset_x", 1)
+			name_label.add_theme_constant_override("shadow_offset_y", 1)
+			name_label.remove_theme_constant_override("shadow_outline_size")
 			var pill_style = StyleBoxFlat.new()
 			pill_style.bg_color = Color(0.05, 0.05, 0.08, 0.68)
 			pill_style.corner_radius_top_left = 6
@@ -390,10 +392,16 @@ func _apply_frame_layout() -> void:
 			_set_rect(art_rect, 22, 48, 178, 218)
 
 		if card_data.card_type == "beast":
-			attack_label.add_theme_font_size_override("font_size", 18)
-			attack_label.add_theme_constant_override("shadow_outline_size", 4)
-			hp_label.add_theme_font_size_override("font_size", 18)
-			hp_label.add_theme_constant_override("shadow_outline_size", 4)
+			attack_label.add_theme_font_size_override("font_size", 16)
+			attack_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.70))
+			attack_label.add_theme_constant_override("shadow_offset_x", 1)
+			attack_label.add_theme_constant_override("shadow_offset_y", 1)
+			attack_label.remove_theme_constant_override("shadow_outline_size")
+			hp_label.add_theme_font_size_override("font_size", 16)
+			hp_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.70))
+			hp_label.add_theme_constant_override("shadow_offset_x", 1)
+			hp_label.add_theme_constant_override("shadow_offset_y", 1)
+			hp_label.remove_theme_constant_override("shadow_outline_size")
 		return
 
 	# Non-compact (full card inspector / collection / deck builder) mode
@@ -401,20 +409,29 @@ func _apply_frame_layout() -> void:
 		$AbilityBox.visible = true
 	name_label.visible = true
 	name_label.remove_theme_stylebox_override("normal")
-	name_label.add_theme_constant_override("shadow_outline_size", 2)
+	name_label.remove_theme_constant_override("shadow_outline_size")
+	name_label.add_theme_constant_override("shadow_offset_x", 1)
+	name_label.add_theme_constant_override("shadow_offset_y", 1)
 	type_label.visible = true
 	ability_title_label.visible = ability_title_label.text != ""
 	ability_desc_label.visible = true
 	ability_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ability_desc_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	ability_desc_label.add_theme_font_size_override("font_size", 10)
-	footer_label.add_theme_font_size_override("font_size", 10)
+	if ability_desc_label.text.length() > 65:
+		ability_desc_label.add_theme_font_size_override("font_size", 8)
+	else:
+		ability_desc_label.add_theme_font_size_override("font_size", 9)
+	footer_label.add_theme_font_size_override("font_size", 8)
 
 	if card_data.card_type == "beast":
 		attack_label.add_theme_font_size_override("font_size", 14)
-		attack_label.add_theme_constant_override("shadow_outline_size", 2)
+		attack_label.remove_theme_constant_override("shadow_outline_size")
+		attack_label.add_theme_constant_override("shadow_offset_x", 1)
+		attack_label.add_theme_constant_override("shadow_offset_y", 1)
 		hp_label.add_theme_font_size_override("font_size", 14)
-		hp_label.add_theme_constant_override("shadow_outline_size", 2)
+		hp_label.remove_theme_constant_override("shadow_outline_size")
+		hp_label.add_theme_constant_override("shadow_offset_x", 1)
+		hp_label.add_theme_constant_override("shadow_offset_y", 1)
 
 	# Default font sizing for name
 	if card_data.name.length() <= 13:

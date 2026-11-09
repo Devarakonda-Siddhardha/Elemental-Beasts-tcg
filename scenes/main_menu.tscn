@@ -223,83 +223,6 @@ texture = ExtResource("2_bg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="DarkOverlay" type="ColorRect" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.02, 0.03, 0.05, 0.45)
-
-[node name="MenuPanel" type="Panel" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -260.0
-offset_top = -280.0
-offset_right = 260.0
-offset_bottom = 280.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_panel")
-
-[node name="AppIcon" type="TextureRect" parent="MenuPanel"]
-visible = false
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -50.0
-offset_top = 24.0
-offset_right = 50.0
-offset_bottom = 124.0
-grow_horizontal = 2
-texture = ExtResource("3_icon")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Title" type="Label" parent="MenuPanel"]
-visible = false
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -220.0
-offset_top = 135.0
-offset_right = 220.0
-offset_bottom = 170.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 24
-text = "ELEMENTAL BEASTS TCG"
-horizontal_alignment = 1
-
-[node name="Subtitle" type="Label" parent="MenuPanel"]
-visible = false
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -200.0
-offset_top = 170.0
-offset_right = 200.0
-offset_bottom = 192.0
-grow_horizontal = 2
-theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
-theme_override_font_sizes/font_size = 13
-text = "LEGACY REBORN — GODOT 4"
-horizontal_alignment = 1
-
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 8
@@ -307,24 +230,24 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -195.0
-offset_top = -76.0
-offset_right = 195.0
-offset_bottom = 234.0
+offset_left = -180.0
+offset_top = -65.0
+offset_right = 180.0
+offset_bottom = 265.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 7
+theme_override_constants/separation = 8
 
 [node name="VsAIButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 0.96, 0.84, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 0.94, 1)
 theme_override_colors/font_pressed_color = Color(1, 0.88, 0.65, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_gold_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_gold_hover")
@@ -333,15 +256,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "⚔️  Single Player vs AI"
 
 [node name="PvPButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.93, 0.9, 1, 1)
 theme_override_colors/font_hover_color = Color(1, 0.98, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.82, 0.76, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_indigo_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_indigo_hover")
@@ -350,15 +273,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "👥  Local 2-Player Match"
 
 [node name="PackOpeningButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 0.93, 0.78, 1)
 theme_override_colors/font_hover_color = Color(1, 0.98, 0.9, 1)
 theme_override_colors/font_pressed_color = Color(0.95, 0.82, 0.58, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_amethyst_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_amethyst_hover")
@@ -367,15 +290,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "🎁  Open Booster Packs"
 
 [node name="CollectionButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.93, 0.9, 1, 1)
 theme_override_colors/font_hover_color = Color(1, 0.98, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.82, 0.76, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_indigo_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_indigo_hover")
@@ -384,15 +307,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "📖  Card Collection Archive"
 
 [node name="DeckBuilderButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.93, 0.9, 1, 1)
 theme_override_colors/font_hover_color = Color(1, 0.98, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.82, 0.76, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_indigo_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_indigo_hover")
@@ -401,15 +324,15 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "❖  Deck Builder"
 
 [node name="TestSuiteButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(0.93, 0.9, 1, 1)
 theme_override_colors/font_hover_color = Color(1, 0.98, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.82, 0.76, 0.96, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_indigo_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_indigo_hover")
@@ -418,76 +341,18 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "⚙️  Audio & Voice Settings"
 
 [node name="QuitButton" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(0, 38)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 0.88, 0.92, 1)
 theme_override_colors/font_hover_color = Color(1, 0.96, 0.98, 1)
 theme_override_colors/font_pressed_color = Color(0.9, 0.7, 0.78, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.55)
 theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 2
+theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = SubResource("StyleBoxFlat_crimson_normal")
 theme_override_styles/hover = SubResource("StyleBoxFlat_crimson_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_crimson_pressed")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
 text = "✖  Exit Game"
-
-[node name="FloatingPackWidget" type="Control" parent="."]
-layout_mode = 1
-anchors_preset = 0
-offset_left = 1090.0
-offset_top = 500.0
-offset_right = 1170.0
-offset_bottom = 650.0
-pivot_offset = Vector2(40, 75)
-mouse_filter = 2
-
-[node name="FloatingPackButton" type="TextureButton" parent="FloatingPackWidget"]
-custom_minimum_size = Vector2(76, 150)
-layout_mode = 0
-offset_left = 2.0
-offset_top = 0.0
-offset_right = 78.0
-offset_bottom = 150.0
-pivot_offset = Vector2(38, 75)
-mouse_default_cursor_shape = 2
-texture_normal = ExtResource("4_pack")
-ignore_texture_size = true
-stretch_mode = 5
-
-[node name="OpenPacksLabel" type="Label" parent="FloatingPackWidget"]
-layout_mode = 0
-offset_left = -12.0
-offset_top = 148.0
-offset_right = 92.0
-offset_bottom = 172.0
-theme_override_colors/font_color = Color(1, 0.9, 0.42, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.95)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-theme_override_font_sizes/font_size = 11
-theme_override_styles/normal = SubResource("StyleBoxFlat_pedestal_badge")
-text = "✦ OPEN PACKS ✦"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="FooterLabel" type="Label" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -300.0
-offset_top = -28.0
-offset_right = 300.0
-offset_bottom = -8.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 0.8)
-theme_override_font_sizes/font_size = 11
-text = "Elemental Beasts TCG Reconstruction • Dual Resource • 5-Mana Refresh • Stone Pile • Fusion"
-horizontal_alignment = 1

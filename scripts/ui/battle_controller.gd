@@ -283,46 +283,51 @@ func _update_mana_pips(container: HBoxContainer, current: int) -> void:
 			c.queue_free()
 		var orb_holder := Control.new()
 		orb_holder.set_meta("is_mana_symbol_orb", true)
-		orb_holder.custom_minimum_size = Vector2(140, 48)
+		orb_holder.custom_minimum_size = Vector2(58, 58)
 		orb_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		container.add_child(orb_holder)
 
 		var orb := Panel.new()
 		orb.name = "ManaOrb"
-		orb.position = Vector2(0, 0)
-		orb.size = Vector2(46, 46)
+		orb.position = Vector2.ZERO
+		orb.size = Vector2(58, 58)
 		orb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		orb_holder.add_child(orb)
 
 		var inner_ring := Panel.new()
 		inner_ring.name = "InnerRing"
 		inner_ring.position = Vector2(4, 4)
-		inner_ring.size = Vector2(38, 38)
+		inner_ring.size = Vector2(50, 50)
 		inner_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		orb.add_child(inner_ring)
 
 		var num_lbl := Label.new()
 		num_lbl.name = "ManaNum"
-		num_lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		num_lbl.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		num_lbl.offset_top = 4.0
+		num_lbl.offset_bottom = 36.0
 		num_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		num_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		num_lbl.add_theme_font_size_override("font_size", 22)
 		num_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-		num_lbl.add_theme_color_override("font_shadow_color", Color(0.0, 0.12, 0.35, 0.95))
+		num_lbl.add_theme_color_override("font_shadow_color", Color(0.0, 0.12, 0.35, 0.70))
 		num_lbl.add_theme_constant_override("shadow_offset_x", 1)
-		num_lbl.add_theme_constant_override("shadow_offset_y", 2)
+		num_lbl.add_theme_constant_override("shadow_offset_y", 1)
 		num_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		orb.add_child(num_lbl)
 
 		var cap_lbl := Label.new()
 		cap_lbl.name = "ManaTag"
-		cap_lbl.position = Vector2(54, 12)
-		cap_lbl.size = Vector2(90, 24)
+		cap_lbl.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		cap_lbl.offset_top = -18.0
+		cap_lbl.offset_bottom = -3.0
 		cap_lbl.text = "MANA"
-		cap_lbl.add_theme_font_size_override("font_size", 13)
-		cap_lbl.add_theme_color_override("font_color", Color(0.62, 0.88, 1.0))
+		cap_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cap_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		cap_lbl.add_theme_font_size_override("font_size", 10)
+		cap_lbl.add_theme_color_override("font_color", Color(0.65, 0.90, 1.0))
 		cap_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		orb_holder.add_child(cap_lbl)
+		orb.add_child(cap_lbl)
 
 	var holder: Control = container.get_child(0)
 	var orb_panel: Panel = holder.get_node("ManaOrb")
@@ -330,16 +335,16 @@ func _update_mana_pips(container: HBoxContainer, current: int) -> void:
 	var num_label: Label = orb_panel.get_node("ManaNum")
 
 	var outer_sb := StyleBoxFlat.new()
-	outer_sb.set_corner_radius_all(23)
-	outer_sb.set_border_width_all(3)
+	outer_sb.set_corner_radius_all(29)
+	outer_sb.set_border_width_all(2)
 	var inner_sb := StyleBoxFlat.new()
-	inner_sb.set_corner_radius_all(19)
+	inner_sb.set_corner_radius_all(25)
 	inner_sb.set_border_width_all(1)
 
 	if current > 0:
 		outer_sb.bg_color = Color(0.06, 0.34, 0.78, 0.98)
 		outer_sb.border_color = Color(0.95, 0.82, 0.35, 1.0)
-		outer_sb.shadow_color = Color(0.20, 0.72, 1.0, 0.75)
+		outer_sb.shadow_color = Color(0.20, 0.72, 1.0, 0.50)
 		outer_sb.shadow_size = 8
 		inner_sb.bg_color = Color(0.16, 0.62, 0.98, 0.95)
 		inner_sb.border_color = Color(0.78, 0.96, 1.0, 0.9)

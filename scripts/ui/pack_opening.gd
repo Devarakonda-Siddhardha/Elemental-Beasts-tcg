@@ -252,10 +252,6 @@ func _reset_to_new_pack() -> void:
 
 	instruction_banner.text = "↔ Drag Left / Right to Rotate Pack (Front & Back)  •  ⚡ Click or Tear Top of Pack to Open!"
 	_update_pack_3d_visuals(0.0)
-	if has_node("/root/SoundManager"):
-		var sm = get_node("/root/SoundManager")
-		if sm.has_method("play_voice"):
-			sm.play_voice("vo_pack_open")
 
 func _tear_open_pack() -> void:
 	if state != PackState.INSPECTING_PACK:
@@ -465,8 +461,9 @@ func _present_5_facedown_cards() -> void:
 		rarity_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rarity_lbl.add_theme_font_size_override("font_size", 12)
 		rarity_lbl.add_theme_color_override("font_color", rarity["color"])
-		rarity_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
-		rarity_lbl.add_theme_constant_override("shadow_outline_size", 3)
+		rarity_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.65))
+		rarity_lbl.add_theme_constant_override("shadow_offset_x", 1)
+		rarity_lbl.add_theme_constant_override("shadow_offset_y", 1)
 		slot_vbox.add_child(rarity_lbl)
 
 		# Fixed 200x278 card stage container so scaling (0.85) stays centered

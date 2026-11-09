@@ -39,12 +39,9 @@ custom_minimum_size = Vector2(114, 34)
 layout_mode = 2
 text = "← Back"
 
-[node name="Title" type="Label" parent="TopBar"]
-visible = false
+[node name="TitleSpacer" type="Control" parent="TopBar"]
+custom_minimum_size = Vector2(410, 34)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
-theme_override_font_sizes/font_size = 18
-text = "ELEMENTAL BEASTS TCG — DECK BUILDER"
 
 [node name="Spacer" type="Control" parent="TopBar"]
 layout_mode = 2
