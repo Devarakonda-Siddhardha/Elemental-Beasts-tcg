@@ -393,21 +393,29 @@ static func generate_ui_click() -> AudioStreamWAV:
 		
 	return create_wav_from_samples(samples)
 
-# 19. Looping Thematic Main Menu BGM Fallback (8.0s D-minor draconic harp & pad loop)
+# 19. Looping Thematic Main Menu BGM Fallback (8.0s D-minor draconic harp & orchestral pad loop)
 static func generate_main_menu_bgm() -> AudioStreamWAV:
 	var duration: float = 8.0
 	var num_samples: int = int(SAMPLE_RATE * duration)
 	var samples: Array[float] = []
 	samples.resize(num_samples)
-	var arp_freqs: Array[float] = [293.66, 349.23, 440.0, 587.33, 440.0, 349.23, 261.63, 392.0]
+	var chord_d: Array[float] = [146.83, 220.0, 293.66, 349.23, 440.0]
+	var chord_bb: Array[float] = [116.54, 174.61, 233.08, 293.66, 349.23]
 	for i in range(num_samples):
 		var t: float = float(i) / float(SAMPLE_RATE)
-		var step: int = int(t * 2.0) % arp_freqs.size()
-		var dt: float = fmod(t, 0.5)
-		var f: float = arp_freqs[step]
-		var arp: float = (sin(dt * f * TAU) + 0.4 * sin(dt * f * 2.0 * TAU)) * exp(-dt * 4.5) * 0.22
-		var drone: float = (sin(t * 146.83 * TAU) + 0.5 * sin(t * 220.0 * TAU)) * 0.14
-		samples[i] = clampf(arp + drone, -1.0, 1.0)
+		# 4 seconds D minor, 4 seconds Bb Major
+		var chord: Array[float] = chord_d if t < 4.0 else chord_bb
+		var pad: float = 0.0
+		for f in chord:
+			pad += (sin(t * f * TAU) + 0.4 * sin(t * f * 2.0 * TAU) + 0.15 * sin(t * f * 3.0 * TAU)) * 0.06
+		# Cello root drone
+		var root_f: float = 73.42 if t < 4.0 else 58.27
+		var bass: float = (sin(t * root_f * TAU) + 0.5 * sin(t * root_f * 2.0 * TAU)) * 0.16
+		# Soft harp note every 1.0s
+		var harp_t: float = fmod(t, 1.0)
+		var harp_f: float = chord[int(t * 2.0) % chord.size()] * 2.0
+		var harp: float = sin(harp_t * harp_f * TAU) * exp(-harp_t * 3.5) * 0.12
+		samples[i] = clampf(pad + bass + harp, -1.0, 1.0)
 	var wav := create_wav_from_samples(samples)
 	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	wav.loop_begin = 0

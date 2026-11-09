@@ -77,6 +77,7 @@ func run_all_tests() -> void:
 	test_34_victory_screen_and_main_menu_bgm()
 	test_35_procedural_playmat_and_layout()
 	test_36_card_reworks_and_new_supporters_spells()
+	test_37_beast_action_modal_centering_and_orchestral_bgm()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -1226,6 +1227,36 @@ func test_36_card_reworks_and_new_supporters_spells() -> void:
 	state_spells.player_hands[0] = [state_spells.card_db["shadow_pact"]]
 	state_spells.cast_spell(0, 0, sac_b)
 	assert_true(state_spells.player_fields[0].size() == 0 and state_spells.player_hands[0].size() == 3, "Requirement 36s: Shadow Pact sacrifices beast and draws 3 cards")
+
+func test_37_beast_action_modal_centering_and_orchestral_bgm() -> void:
+	# 1. Verify BeastActionModal centers correctly in the viewport
+	var battle_scene: PackedScene = load("res://scenes/battle.tscn")
+	var bc: BattleController = battle_scene.instantiate()
+	root.add_child(bc)
+	bc._ready()
+
+	# Place Nightmare Stalker on player field
+	var db = CardData.load_database()
+	var beast = BeastInstance.create(db["nightmare_stalker"], 0, 0)
+	bc.game_state.player_fields[0].append(beast)
+	bc.open_beast_action_modal(0)
+
+	var modal = bc.get_node_or_null("BeastActionModal")
+	assert_true(modal != null, "Requirement 37a: BeastActionModal is created on beast action select")
+	if modal:
+		var panel: Control = modal.get_child(0)
+		assert_true(panel != null, "Requirement 37b: BeastActionModal contains panel container")
+		# Verify panel is inside screen bounds (x < 500, y < 350) and NOT off-screen at bottom-right
+		assert_true(panel.position.x < 500.0 and panel.position.y < 350.0, "Requirement 37c: BeastActionModal panel is centered on screen and NOT shoved off-screen (pos: %s)" % str(panel.position))
+		modal.queue_free()
+
+	bc.queue_free()
+
+	# 2. Verify Orchestral BGM MP3
+	var bgm_file = FileAccess.open("res://assets/audio/bgm/main_menu_theme.mp3", FileAccess.READ)
+	assert_true(bgm_file != null and bgm_file.get_length() > 500000, "Requirement 37d: Orchestral BGM main_menu_theme.mp3 is high-quality (>500KB)")
+	if bgm_file:
+		bgm_file.close()
 
 
 

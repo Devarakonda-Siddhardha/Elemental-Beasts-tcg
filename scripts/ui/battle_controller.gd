@@ -1243,7 +1243,8 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		refresh_full_ui()
 		return
 
-	# Beast action selection
+	if current_action_mode == "targeting_ability":
+		reset_action_mode()
 	var can_atk = beast.can_attack(game_state.turn_number) and game_state.active_player_id == 0
 	var has_activated_ability = beast.card_data.ability and beast.card_data.ability.get("trigger") == "activated"
 	var can_abil = has_activated_ability and beast.can_use_ability() and game_state.active_player_id == 0
@@ -1280,8 +1281,13 @@ func open_beast_action_modal(field_index: int) -> void:
 
 	var panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(520, 250)
-	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = Vector2((1280 - 520) / 2.0, (720 - 250) / 2.0)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	modal.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			modal.queue_free()
+	)
 
 	var sb = StyleBoxFlat.new()
 	sb.bg_color = Color(0.08, 0.1, 0.16, 0.98)
@@ -1370,14 +1376,21 @@ func _on_beast_ability_triggered(field_index: int) -> void:
 
 	var ability = beast.card_data.ability if beast.card_data.ability else {}
 	var effect = ability.get("effect", "")
-	var needs_target = effect in ["inflict_paralysis", "volcanic_storm", "emp_railgun"]
+	var needs_target = effect in [
+		"inflict_paralysis", "volcanic_storm", "emp_railgun",
+		"shadow_siphon", "subzero_bite", "magma_eruption", "storm_dive", "searing_cyclone"
+	]
 
 	if needs_target and game_state.player_fields[1].size() > 0:
 		current_action_mode = "targeting_ability"
 		selected_ability_beast_index = field_index
-		prompt_banner.text = "⚡ Select target enemy beast for " + beast.card_data.name + "'s " + ability.get("name", "Ability") + "!"
+		prompt_banner.text = "⚡ Select target enemy beast for " + beast.card_data.name + "'s " + ability.get("name", "Ability") + " (Right-Click or ESC to Cancel)!"
 		prompt_banner.visible = true
 	else:
+		if needs_target and game_state.player_fields[1].is_empty() and effect in ["inflict_paralysis", "volcanic_storm", "magma_eruption", "storm_dive"]:
+			log_message("[color=#e76f51]  ⚠️ No opposing Beasts on battlefield to target![/color]")
+			return
+
 		var res = game_state.activate_beast_ability(0, field_index)
 		if res.success:
 			if has_node("/root/SoundManager"):
@@ -1388,7 +1401,10 @@ func _on_beast_ability_triggered(field_index: int) -> void:
 			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 
 func _on_player_field_right_clicked(card_ui: CardUI, field_index: int) -> void:
-	# Right click activates beast special ability
+	if current_action_mode != "none":
+		reset_action_mode()
+		refresh_full_ui()
+		return
 	if game_state.active_player_id != 0 or game_state.is_game_over:
 		return
 	_on_beast_ability_triggered(field_index)
@@ -1478,6 +1494,24 @@ func reset_action_mode() -> void:
 	selected_field_beast_ui = null
 	selected_ability_beast_index = -1
 	prompt_banner.visible = false
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_RIGHT:
+			if has_node("BeastActionModal"):
+				get_node("BeastActionModal").queue_free()
+			if current_action_mode != "none":
+				reset_action_mode()
+				refresh_full_ui()
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ESCAPE:
+			if has_node("BeastActionModal"):
+				get_node("BeastActionModal").queue_free()
+			if has_node("DeckSearchModal"):
+				get_node("DeckSearchModal").queue_free()
+			if current_action_mode != "none":
+				reset_action_mode()
+				refresh_full_ui()
 
 func _on_end_turn_pressed() -> void:
 	if game_state.active_player_id == 0 and not game_state.is_game_over:
