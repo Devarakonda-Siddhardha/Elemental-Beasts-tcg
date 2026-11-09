@@ -81,6 +81,7 @@ func run_all_tests() -> void:
 	test_36_card_reworks_and_new_supporters_spells()
 	test_37_beast_action_modal_centering_and_orchestral_bgm()
 	test_38_set_2_water_and_relics_mechanics()
+	test_39_element_stones_secondary_cost_and_auto_shuffle()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -1363,6 +1364,89 @@ func test_38_set_2_water_and_relics_mechanics() -> void:
 	PlayerSaveManager.record_boss_defeat("boss_water")
 	var post_save = PlayerSaveManager.load_save()
 	assert_true(post_save.get("bosses_defeated", []).has("boss_water"), "Requirement 38i2: PlayerSaveManager persists boss gauntlet victories")
+
+func test_39_element_stones_secondary_cost_and_auto_shuffle() -> void:
+	var state = GameState.new()
+	state.start_game()
+	var db = state.card_db
+
+	# 1. Element stones as secondary resource: 0 Mana + 2 Stones can pay cost of 2
+	var mana_mgr = state.get_mana(0)
+	var stone_mgr = state.get_stones(0)
+	mana_mgr.current_mana = 0
+	stone_mgr.stone_pile["fire"] = 2
+
+	assert_true(state.can_pay_card_cost(0, 2), "Requirement 39a: can_pay_card_cost returns true with 0 Mana and 2 Element Stones")
+
+	# Summon Little Dragon using 0 Mana and 2 Element Stones
+	state.player_hands[0] = [db["little_dragon"]]
+	var beast = state.summon_little_dragon(0, 0)
+	assert_true(beast != null and mana_mgr.current_mana == 0 and stone_mgr.get_stone_count("fire") == 0, "Requirement 39b: Little Dragon summoned successfully using 2 Element Stones when at 0 Mana")
+
+	# 2. Mixed payment: 1 Mana + 1 Stone pays cost of 2
+	mana_mgr.current_mana = 1
+	stone_mgr.stone_pile["water"] = 2
+	state.player_hands[0] = [db["ancient_insight"]]
+	var pay_res = state.pay_card_cost(0, 2)
+	assert_true(pay_res.success and pay_res.mana_spent == 1 and pay_res.stones_spent == 1 and mana_mgr.current_mana == 0 and stone_mgr.get_stone_count("water") == 1, "Requirement 39c: Mixed payment spends 1 Mana and 1 Element Stone for cost of 2")
+
+	# 3. Element stone matching preference: matching card element spent first
+	mana_mgr.current_mana = 0
+	stone_mgr.stone_pile["fire"] = 1
+	stone_mgr.stone_pile["lightning"] = 3
+	var pay_pref = state.pay_card_cost(0, 1, db["fire_dragon"])
+	assert_true(pay_pref.success and stone_mgr.get_stone_count("fire") == 0 and stone_mgr.get_stone_count("lightning") == 3, "Requirement 39d: Payment prioritizes matching card element stone")
+
+	# 4. Insufficient resources fails cleanly
+	mana_mgr.current_mana = 1
+	stone_mgr.stone_pile.clear()
+	stone_mgr.stone_pile["wind"] = 1
+	assert_true(not state.can_pay_card_cost(0, 3), "Requirement 39e: can_pay_card_cost returns false when Mana + Stones < cost")
+
+	# 5. Search cards emit deck_shuffled signal (auto-shuffle after searching deck)
+	var shuffle_counter = {"count": 0}
+	var record_shuffle = func(p_id):
+		if p_id == 0:
+			shuffle_counter["count"] += 1
+	state.deck_shuffled.connect(record_shuffle)
+
+	# Test Compass auto-shuffle
+	mana_mgr.current_mana = 2
+	state.player_hands[0] = [db["compass"]]
+	var stone_target = db["fire_stone"]
+	state.player_decks[0] = [stone_target, db["little_dragon"], db["little_dragon"]]
+	state.cast_compass(0, 0, stone_target)
+	assert_true(shuffle_counter["count"] == 1, "Requirement 39f: Compass auto-shuffles deck and emits deck_shuffled")
+
+	# Test Draconic Tome auto-shuffle
+	mana_mgr.current_mana = 2
+	state.player_hands[0] = [db["draconic_tome"]]
+	var beast_target = db["little_dragon"]
+	state.player_decks[0] = [beast_target, db["fire_stone"]]
+	state.cast_draconic_tome(0, 0, beast_target)
+	assert_true(shuffle_counter["count"] == 2, "Requirement 39g: Draconic Tome auto-shuffles deck and emits deck_shuffled")
+
+	# Test Draconic Calling auto-shuffle
+	mana_mgr.current_mana = 2
+	state.player_hands[0] = [db["draconic_calling"], db["little_dragon"]]
+	state.player_decks[0] = [db["fire_dragon"], db["ice_dragon"], db["fire_stone"]]
+	state.cast_draconic_calling(0, 0, 1, [db["fire_dragon"]])
+	assert_true(shuffle_counter["count"] == 3, "Requirement 39h: Draconic Calling auto-shuffles deck and emits deck_shuffled")
+
+	# Test Elemental Convergence auto-shuffle
+	mana_mgr.current_mana = 2
+	state.player_hands[0] = [db["elemental_convergence"]]
+	state.player_decks[0] = [db["water_stone"], db["lightning_stone"], db["little_dragon"]]
+	state.cast_elemental_convergence(0, 0, [db["water_stone"]])
+	assert_true(shuffle_counter["count"] == 4, "Requirement 39i: Elemental Convergence auto-shuffles deck and emits deck_shuffled")
+
+	# Test Call to Arms auto-shuffle
+	mana_mgr.current_mana = 1
+	state.player_hands[0] = [db["call_to_arms"]]
+	state.player_decks[0] = [db["fire_dragon"], db["fire_stone"]]
+	state.cast_call_to_arms(0, 0, db["fire_dragon"])
+	assert_true(shuffle_counter["count"] == 5, "Requirement 39j: Dragon Call to Arms auto-shuffles deck and emits deck_shuffled")
+
 
 
 

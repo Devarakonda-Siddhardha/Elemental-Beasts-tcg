@@ -85,6 +85,13 @@ func _ready() -> void:
 		spawn_floating_combat_text(Vector2(640, 480 if p_id == 0 else 240), "EQUIPPED: " + relic.name, Color(0.3, 0.85, 1.0))
 		log_message("[color=#5cd6ff]❖ RELIC ATTACHED: " + relic.name + " equipped to " + beast.card_data.name + "[/color]")
 	)
+	game_state.card_cost_paid.connect(func(p_id, card_data, mana_spent, stones_spent):
+		if stones_spent > 0:
+			var stone_pos = Vector2(1180, 560) if p_id == 0 else Vector2(1180, 160)
+			spawn_floating_combat_text(stone_pos, "-%d Stone" % stones_spent if stones_spent == 1 else "-%d Stones" % stones_spent, Color(0.95, 0.75, 0.25))
+			var c_name = card_data.name if card_data != null else "Card"
+			log_message("[color=#f4a261]◈ Paid %d Mana + %d Element Stone(s) for %s[/color]" % [mana_spent, stones_spent, c_name])
+	)
 	game_state.game_ended.connect(_on_game_ended)
 	
 	if not end_turn_button.pressed.is_connected(_on_end_turn_pressed):
@@ -587,9 +594,9 @@ func refresh_player_hand() -> void:
 		if game_state.active_player_id == 0:
 			if card.card_type == "stone" and stone_mgr.can_place_stone():
 				playable = true
-			elif card.card_type == "realm" and mana_mgr.can_spend(card.mana_cost):
+			elif card.card_type == "realm" and game_state.can_pay_card_cost(0, card.mana_cost):
 				playable = true
-			elif (card.id == "little_dragon" or card.sub_type == "base_dragon") and mana_mgr.can_spend(card.mana_cost if card.mana_cost > 0 else 2) and field.size() < 4:
+			elif (card.id == "little_dragon" or card.sub_type == "base_dragon") and game_state.can_pay_card_cost(0, card.mana_cost if card.mana_cost > 0 else 2) and field.size() < 4:
 				playable = true
 			elif card.evolution_stage == 1:
 				for b in field:
@@ -612,16 +619,20 @@ func refresh_player_hand() -> void:
 			elif card.id == "god_dragon":
 				if GodDragonRitual.can_summon_god_dragon(card, field, stone_mgr, game_state.player_has_summoned_god_dragon[0]).valid:
 					playable = true
-			elif (card.id == "compass" or card.id == "draconic_tome" or card.id == "ancient_insight" or card.id == "elemental_convergence") and mana_mgr.can_spend(card.mana_cost):
+			elif (card.id == "compass" or card.id == "draconic_tome" or card.id == "ancient_insight" or card.id == "elemental_convergence") and game_state.can_pay_card_cost(0, card.mana_cost):
 				playable = true
-			elif card.id == "draconic_calling" and mana_mgr.can_spend(card.mana_cost) and hand.size() >= 2:
+			elif card.id == "draconic_calling" and game_state.can_pay_card_cost(0, card.mana_cost) and hand.size() >= 2:
 				playable = true
-			elif card.id == "soul_rebirth" and mana_mgr.can_spend(card.mana_cost):
+			elif card.id == "soul_rebirth" and game_state.can_pay_card_cost(0, card.mana_cost):
 				for dc in game_state.get_discard(0):
 					if dc is CardData and dc.card_type == "beast":
 						playable = true
 						break
-			elif card.card_type == "spell" and mana_mgr.can_spend(card.mana_cost):
+			elif card.card_type == "spell" and game_state.can_pay_card_cost(0, card.mana_cost):
+				playable = true
+			elif card.card_type == "relic" and game_state.can_pay_card_cost(0, card.mana_cost) and field.size() > 0:
+				playable = true
+			elif card.card_type == "rift" and game_state.can_pay_card_cost(0, card.mana_cost):
 				playable = true
 
 		card_ui.set_playable(playable)
@@ -814,8 +825,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		
 	# If Compass -> open interactive Deck Search View for Element Stones!
 	if card.id == "compass":
-		if not game_state.get_mana(0).can_spend(RulesConfig.COMPASS_MANA_COST):
-			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Compass[/color]")
+		if not game_state.can_pay_card_cost(0, RulesConfig.COMPASS_MANA_COST):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧/◈ for Compass[/color]")
 			return
 		var stones_in_deck: Array = []
 		for c in game_state.get_deck(0):
@@ -844,8 +855,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 
 	# If Draconic Tome -> open interactive Deck Search View for Dragon Beasts!
 	if card.id == "draconic_tome":
-		if not game_state.get_mana(0).can_spend(card.mana_cost):
-			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Draconic Tome[/color]")
+		if not game_state.can_pay_card_cost(0, card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧/◈ for Draconic Tome[/color]")
 			return
 		var dragons_in_deck: Array = []
 		for c in game_state.get_deck(0):
@@ -888,8 +899,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 
 	# If Draconic Calling -> Discard 1 card from hand, then search deck for up to 2 Dragon Beast cards
 	if card.id == "draconic_calling":
-		if not game_state.get_mana(0).can_spend(card.mana_cost):
-			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Draconic Calling[/color]")
+		if not game_state.can_pay_card_cost(0, card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧/◈ for Draconic Calling[/color]")
 			return
 		var other_hand_cards: Array = []
 		var hand_ref: Array = game_state.get_hand(0)
@@ -962,8 +973,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 
 	# If Soul Rebirth -> Put 1 Dragon Beast card from discard pile into hand (1 Mana)
 	if card.id == "soul_rebirth":
-		if not game_state.get_mana(0).can_spend(card.mana_cost):
-			log_message("[color=#e76f51]  ⚠️ Need 1 💧 for Soul Rebirth[/color]")
+		if not game_state.can_pay_card_cost(0, card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 1 💧/◈ for Soul Rebirth[/color]")
 			return
 		var discard_dragons: Array = []
 		for dc in game_state.get_discard(0):
@@ -991,8 +1002,8 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 
 	# If Elemental Convergence -> Search deck for up to 2 Element Stones
 	if card.id == "elemental_convergence":
-		if not game_state.get_mana(0).can_spend(card.mana_cost):
-			log_message("[color=#e76f51]  ⚠️ Need 2 💧 for Elemental Convergence[/color]")
+		if not game_state.can_pay_card_cost(0, card.mana_cost):
+			log_message("[color=#e76f51]  ⚠️ Need 2 💧/◈ for Elemental Convergence[/color]")
 			return
 		var stones_1: Array = []
 		for sc in game_state.get_deck(0):
@@ -2109,6 +2120,8 @@ func play_deck_shuffle_animation(player_id: int) -> void:
 			sm.play_deck_shuffle()
 		else:
 			sm.play_card_hover()
+
+	spawn_floating_combat_text(origin, "✦ DECK SHUFFLED ✦", Color(1.0, 0.88, 0.35))
 
 	var clean_tw = create_tween()
 	clean_tw.tween_interval(0.68)

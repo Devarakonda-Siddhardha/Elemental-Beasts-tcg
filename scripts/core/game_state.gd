@@ -19,6 +19,7 @@ signal rift_triggered(player_id: int, rift: CardData, message: String)
 signal paralysis_tested(player_id: int, beast: BeastInstance, recovered: bool, coin: String)
 signal combat_resolved(result: Dictionary)
 signal deck_shuffled(player_id: int)
+signal card_cost_paid(player_id: int, card: CardData, mana_spent: int, stones_spent: int)
 signal game_ended(winner_id: int, reason: String)
 
 var turn_number: int = 1
@@ -61,6 +62,42 @@ func get_mana(player_id: int) -> ManaManager:
 
 func get_stones(player_id: int) -> StoneManager:
 	return player_stones[player_id]
+
+func can_pay_card_cost(player_id: int, cost: int) -> bool:
+	if cost <= 0:
+		return true
+	var mana_mgr = player_mana[player_id]
+	var stone_mgr = player_stones[player_id]
+	return (mana_mgr.current_mana + stone_mgr.get_total_stones()) >= cost
+
+func pay_card_cost(player_id: int, cost: int, card: CardData = null) -> Dictionary:
+	if cost <= 0:
+		return {"success": true, "mana_spent": 0, "stones_spent": 0}
+	var mana_mgr = player_mana[player_id]
+	var stone_mgr = player_stones[player_id]
+	var total_avail = mana_mgr.current_mana + stone_mgr.get_total_stones()
+	if total_avail < cost:
+		return {"success": false, "error": "Insufficient resources (need %d total Mana / Element Stones)" % cost}
+
+	var mana_to_spend = mini(mana_mgr.current_mana, cost)
+	if mana_to_spend > 0:
+		mana_mgr.spend(mana_to_spend)
+
+	var stone_deficit = cost - mana_to_spend
+	var stones_spent = 0
+	if stone_deficit > 0:
+		var pref_elem = card.element if card != null else ""
+		if pref_elem != "" and pref_elem != "neutral" and stone_mgr.get_stone_count(pref_elem) > 0:
+			var from_pref = mini(stone_mgr.get_stone_count(pref_elem), stone_deficit)
+			stone_mgr.spend_stones({pref_elem: from_pref})
+			stone_deficit -= from_pref
+			stones_spent += from_pref
+		if stone_deficit > 0:
+			stone_mgr.spend_stones({"any_stone": stone_deficit})
+			stones_spent += stone_deficit
+
+	card_cost_paid.emit(player_id, card, mana_to_spend, stones_spent)
+	return {"success": true, "mana_spent": mana_to_spend, "stones_spent": stones_spent}
 
 func start_game(deck0_ids: Array = [], deck1_ids: Array = [], starting_player: int = 0) -> void:
 	is_game_over = false
@@ -265,12 +302,11 @@ func summon_little_dragon(player_id: int, hand_index: int) -> BeastInstance:
 	if field.size() >= RulesConfig.MAX_FIELD_BEASTS:
 		return null
 		
-	var mana_mgr = player_mana[player_id]
 	var cost: int = card.mana_cost if card.mana_cost > 0 else RulesConfig.LITTLE_DRAGON_MANA_COST
-	if not mana_mgr.can_spend(cost):
+	if not can_pay_card_cost(player_id, cost):
 		return null
 		
-	mana_mgr.spend(cost)
+	pay_card_cost(player_id, cost, card)
 	hand.remove_at(hand_index)
 	
 	var beast = BeastInstance.create(card, player_id, turn_number)
@@ -340,11 +376,10 @@ func play_realm(player_id: int, hand_index: int) -> Dictionary:
 	if card.card_type != "realm":
 		return {"success": false, "error": "Card is not a Realm / Location card"}
 		
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana / Element Stones (requires " + str(card.mana_cost) + ")"}
 		
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	
 	var old_realm: CardData = active_realm
@@ -491,11 +526,10 @@ func cast_compass(player_id: int, hand_index: int, chosen_stone: CardData = null
 	if card.id != "compass":
 		return {"success": false, "error": "Card is not Compass"}
 		
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(RulesConfig.COMPASS_MANA_COST):
-		return {"success": false, "error": "Insufficient Mana (requires 2 Mana)"}
+	if not can_pay_card_cost(player_id, RulesConfig.COMPASS_MANA_COST):
+		return {"success": false, "error": "Insufficient resources (need 2 Mana / Element Stones)"}
 		
-	mana_mgr.spend(RulesConfig.COMPASS_MANA_COST)
+	pay_card_cost(player_id, RulesConfig.COMPASS_MANA_COST, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 	
@@ -516,11 +550,10 @@ func cast_draconic_tome(player_id: int, hand_index: int, chosen_dragon: CardData
 	if card.id != "draconic_tome":
 		return {"success": false, "error": "Card is not Draconic Tome"}
 		
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires 2 Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (need " + str(card.mana_cost) + " Mana / Element Stones)"}
 		
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 	
@@ -541,11 +574,10 @@ func cast_ancient_insight(player_id: int, hand_index: int) -> Dictionary:
 	if card.id != "ancient_insight":
 		return {"success": false, "error": "Card is not Ancient Insight"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (need " + str(card.mana_cost) + " Mana / Element Stones)"}
 
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 
@@ -577,9 +609,8 @@ func cast_draconic_calling(player_id: int, hand_index: int, discard_hand_index: 
 	if hand.size() < 2:
 		return {"success": false, "error": "Requires at least 1 other card in hand to discard"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (need " + str(card.mana_cost) + " Mana / Element Stones)"}
 
 	# Determine which card in hand to discard (other than Draconic Calling itself)
 	var disc_idx: int = discard_hand_index
@@ -587,7 +618,7 @@ func cast_draconic_calling(player_id: int, hand_index: int, discard_hand_index: 
 		disc_idx = 0 if hand_index != 0 else 1
 
 	var discarded_card: CardData = hand[disc_idx]
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 
 	# Remove both Draconic Calling and the discarded card safely
 	if disc_idx > hand_index:
@@ -621,9 +652,8 @@ func cast_soul_rebirth(player_id: int, hand_index: int, chosen_dragon: CardData 
 	if card.id != "soul_rebirth":
 		return {"success": false, "error": "Card is not Soul Rebirth"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (need " + str(card.mana_cost) + " Mana / Element Stones)"}
 
 	var discard = player_discards[player_id]
 	var has_dragon_in_discard := false
@@ -634,7 +664,7 @@ func cast_soul_rebirth(player_id: int, hand_index: int, chosen_dragon: CardData 
 	if not has_dragon_in_discard:
 		return {"success": false, "error": "No Dragon Beast cards in your discard pile"}
 
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	var res = AbilityResolver.execute_soul_rebirth(discard, hand, chosen_dragon)
 	discard.append(card)
@@ -653,11 +683,10 @@ func cast_elemental_convergence(player_id: int, hand_index: int, chosen_stones: 
 	if card.id != "elemental_convergence":
 		return {"success": false, "error": "Card is not Elemental Convergence"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (need " + str(card.mana_cost) + " Mana / Element Stones)"}
 
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 
@@ -678,11 +707,10 @@ func cast_dragon_hoard(player_id: int, hand_index: int, discard_hand_index: int 
 	if card.id != "dragon_hoard":
 		return {"success": false, "error": "Card is not Dragon's Hoard"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
 
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 
@@ -722,14 +750,15 @@ func cast_elemental_alchemy(player_id: int, hand_index: int, discard_stone_elem:
 		return {"success": false, "error": "Card is not Elemental Alchemy"}
 
 	var stone_mgr = player_stones[player_id]
-	if stone_mgr.get_total_stones() < 1:
-		return {"success": false, "error": "Requires at least 1 Element Stone in your Stone Pile to discard"}
-
 	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	var stone_deficit = maxi(0, card.mana_cost - mana_mgr.current_mana)
+	if stone_mgr.get_total_stones() < (stone_deficit + 1):
+		return {"success": false, "error": "Requires at least 1 Element Stone in your Stone Pile to discard in addition to card cost"}
 
-	mana_mgr.spend(card.mana_cost)
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
+
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 
@@ -786,11 +815,10 @@ func cast_draconic_resurgence(player_id: int, hand_index: int, chosen_dragons: A
 	if dragon_count == 0:
 		return {"success": false, "error": "No Dragon Beasts in your discard pile to recover"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
 
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 
 	# Take up to 2 dragons from discard back into deck
@@ -838,11 +866,10 @@ func cast_call_to_arms(player_id: int, hand_index: int, chosen_dragon: CardData 
 	if card.id != "call_to_arms":
 		return {"success": false, "error": "Card is not Dragon Call to Arms"}
 
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
 
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 
@@ -887,11 +914,10 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 	if target_beast and target_beast.is_immune_to_spells():
 		return {"success": false, "error": target_beast.card_data.name + " is immune to all Spell cards!"}
 		
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
 		
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
 
@@ -1113,11 +1139,10 @@ func play_relic(player_id: int, hand_index: int, target_beast: BeastInstance) ->
 	if not target_beast or target_beast.is_dead() or not (target_beast in player_fields[player_id]):
 		return {"success": false, "error": "Must attach relic to a friendly active Beast"}
 		
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana to equip relic"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources to equip relic (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
 		
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	target_beast.attach_relic(card)
 	relic_attached.emit(player_id, card, target_beast)
@@ -1134,11 +1159,10 @@ func play_rift(player_id: int, hand_index: int) -> Dictionary:
 	if card.card_type != "rift":
 		return {"success": false, "error": "Card is not a rift"}
 		
-	var mana_mgr = player_mana[player_id]
-	if not mana_mgr.can_spend(card.mana_cost):
-		return {"success": false, "error": "Insufficient Mana to set rift"}
+	if not can_pay_card_cost(player_id, card.mana_cost):
+		return {"success": false, "error": "Insufficient resources to set rift (requires " + str(card.mana_cost) + " Mana / Element Stones)"}
 		
-	mana_mgr.spend(card.mana_cost)
+	pay_card_cost(player_id, card.mana_cost, card)
 	hand.remove_at(hand_index)
 	player_rifts[player_id].append(card)
 	rift_set.emit(player_id, card)
