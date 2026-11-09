@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/fierce_little_dragon.jpg-8fe2fd6fa74b49d7f9f8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

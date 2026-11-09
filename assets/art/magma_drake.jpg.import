@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/magma_drake.jpg-0b5165462e81bb6cb01400cd99687
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

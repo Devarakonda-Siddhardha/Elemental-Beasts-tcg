@@ -48,6 +48,9 @@ func add_stone_direct(element_name: String, count: int = 1) -> void:
 	stone_pile[el] += count
 	stone_pile_changed.emit(stone_pile)
 
+func add_stone(element_name: String, count: int = 1) -> void:
+	add_stone_direct(element_name, count)
+
 func get_stone_count(element_name: String) -> int:
 	var el = element_name.to_lower()
 	return stone_pile.get(el, 0)

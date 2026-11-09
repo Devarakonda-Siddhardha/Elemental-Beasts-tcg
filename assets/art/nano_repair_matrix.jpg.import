@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/nano_repair_matrix.jpg-58580714dd69582263082e
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

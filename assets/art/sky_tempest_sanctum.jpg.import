@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/sky_tempest_sanctum.jpg-3a1ee84e66282271800a6
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

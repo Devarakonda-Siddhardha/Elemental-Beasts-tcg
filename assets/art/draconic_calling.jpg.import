@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/draconic_calling.jpg-2221063091d1e97c55e7757a
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

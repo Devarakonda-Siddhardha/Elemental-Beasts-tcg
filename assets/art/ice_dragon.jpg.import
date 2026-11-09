@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/ice_dragon.jpg-f2e67b86dac7aea4f1e25a1ca62946
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

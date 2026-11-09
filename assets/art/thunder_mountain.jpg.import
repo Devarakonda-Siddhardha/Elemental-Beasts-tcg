@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/thunder_mountain.jpg-23d76d0335895b8bfac3e8f2
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

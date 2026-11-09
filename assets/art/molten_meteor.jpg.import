@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/molten_meteor.jpg-0cc52ca0a45a1ad115d431307b0
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

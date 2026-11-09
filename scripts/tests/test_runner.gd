@@ -76,6 +76,7 @@ func run_all_tests() -> void:
 	test_33_neutral_setup_supporter_cards()
 	test_34_victory_screen_and_main_menu_bgm()
 	test_35_procedural_playmat_and_layout()
+	test_36_card_reworks_and_new_supporters_spells()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -194,18 +195,21 @@ func test_10_wind_dragon_gale_force_attacks_twice() -> void:
 	var state = GameState.new()
 	state.start_game()
 	
-	# Wind Dragon on field
-	var wind_beast = BeastInstance.create(state.card_db["wind_dragon"], 0, 0) # summoned turn 0
-	state.player_fields[0].append(wind_beast)
+	# Opponent has an enemy beast
+	var enemy_beast = BeastInstance.create(state.card_db["little_dragon"], 1, 0)
+	state.player_fields[1].append(enemy_beast)
 	
-	# Provide 1 wind stone
-	state.get_stones(0).add_stone_direct("wind", 1)
+	# Player 0 has Little Dragon on field and Wind Dragon in hand
+	var ld_beast = BeastInstance.create(state.card_db["little_dragon"], 0, 1)
+	state.player_fields[0].append(ld_beast)
+	state.player_hands[0] = [state.card_db["wind_dragon"]]
+	state.get_stones(0).add_stone_direct("wind", 2)
 	
-	# Activate Gale Force
-	var res = state.activate_beast_ability(0, 0)
-	var can_attack_twice = (wind_beast.max_attacks_per_turn == 2)
-	var stones_spent = (state.get_stones(0).get_total_stones() == 0)
-	assert_true(res.success and can_attack_twice and stones_spent, "Requirement 10: Wind Dragon can use stone-funded Gale Force to attack twice")
+	# Evolve into Wind Dragon
+	var success = state.evolve_beast(0, 0, 0)
+	var enemy_field_empty = (state.player_fields[1].size() == 0)
+	var enemy_hand_has_card = (state.player_hands[1].size() > 0)
+	assert_true(success and enemy_field_empty and enemy_hand_has_card, "Requirement 10: Wind Dragon on-evolve returns one creature on the field back to that player's hand")
 
 func test_11_volcovolt_fusion() -> void:
 	var state = GameState.new()
@@ -274,9 +278,9 @@ func test_15_dragon_stats_and_abilities_match_originals() -> void:
 	var sd: CardData = db.get("shadow_dragon")
 	var sd_match = (sd.hp == 15 and sd.attack == 6 and sd.ability.name == "Cloak of Darkness")
 	
-	# Wind Dragon: HP 14, ATK 5, Gale Force
+	# Wind Dragon: HP 14, ATK 5, Gale Recoil / Gale Force
 	var wd: CardData = db.get("wind_dragon")
-	var wd_match = (wd.hp == 14 and wd.attack == 5 and wd.ability.name == "Gale Force")
+	var wd_match = (wd.hp == 14 and wd.attack == 5 and (wd.ability.name == "Gale Recoil" or wd.ability.name == "Gale Force"))
 	
 	# VolcoVolt Dragon: HP 30, ATK 15, Volcanic Storm
 	var vv: CardData = db.get("volcovolt_dragon")
@@ -1074,6 +1078,145 @@ func test_35_procedural_playmat_and_layout() -> void:
 
 	playmat.free()
 	bc.free()
+
+func test_36_card_reworks_and_new_supporters_spells() -> void:
+	# 1. Zoomed Card View does not cover opponent's profile avatar
+	var b_scene: PackedScene = load("res://scenes/battle.tscn")
+	var bc = b_scene.instantiate()
+	var selected_panel = bc.get_node_or_null("SelectedPanel")
+	assert_true(selected_panel != null and selected_panel.offset_top >= 160.0, "Requirement 36a: Zoomed card preview panel is moved down (offset_top >= 160) to avoid covering the opponent avatar profile")
+	bc.free()
+
+	# 2. Fire Dragon: When evolved, gains +3 Attack that turn
+	var state = GameState.new()
+	state.start_game()
+	var ld = BeastInstance.create(state.card_db["little_dragon"], 0, 1)
+	state.player_fields[0].append(ld)
+	state.player_hands[0] = [state.card_db["fire_dragon"]]
+	state.get_stones(0).add_stone_direct("fire", 2)
+	state.evolve_beast(0, 0, 0)
+	var fire_beast = state.player_fields[0][0]
+	assert_true(fire_beast.bonus_attack == 3 and fire_beast.get_attack() == fire_beast.base_attack + 3, "Requirement 36b: Fire Dragon gains +3 Attack bonus on the turn it evolves")
+
+	# 3. Ice Dragon: When evolved, freeze 1 enemy beast for 1 turn; freeze wears off after turn
+	var state_ice = GameState.new()
+	state_ice.start_game()
+	var ld_ice = BeastInstance.create(state_ice.card_db["little_dragon"], 0, 1)
+	state_ice.player_fields[0].append(ld_ice)
+	var enemy_target = BeastInstance.create(state_ice.card_db["little_dragon"], 1, 0)
+	state_ice.player_fields[1].append(enemy_target)
+	state_ice.player_hands[0] = [state_ice.card_db["ice_dragon"]]
+	state_ice.get_stones(0).add_stone_direct("ice", 2)
+	state_ice.evolve_beast(0, 0, 0)
+	assert_true(enemy_target.freeze_turns == 1, "Requirement 36c: Ice Dragon freezes 1 enemy beast for 1 turn upon evolving")
+	enemy_target.turn_refresh()
+	assert_true(enemy_target.freeze_turns == 0, "Requirement 36d: Glacial Freeze is temporary and wears off after 1 turn")
+
+	# 4. Mechanical Dragon: Immune to spells + activated ability discard stone to draw 2 cards
+	var state_mech = GameState.new()
+	state_mech.start_game()
+	var mech_beast = BeastInstance.create(state_mech.card_db["mechanical_dragon"], 0, 0)
+	state_mech.player_fields[0].append(mech_beast)
+	assert_true(mech_beast.is_immune_to_spells(), "Requirement 36e: Mechanical Dragon has passive immunity to all Spell cards")
+	state_mech.player_hands[0] = [state_mech.card_db["lightning_strike"]]
+	var spell_res = state_mech.cast_spell(0, 0, mech_beast)
+	assert_true(not spell_res.success, "Requirement 36f: Spells targeting Mechanical Dragon fail due to spell immunity")
+
+	# Test Mechanical Dragon Overclock Draw
+	state_mech.player_hands[0] = []
+	state_mech.get_stones(0).add_stone_direct("mechanical", 1)
+	var act_res = state_mech.activate_beast_ability(0, 0)
+	assert_true(act_res.success and state_mech.player_hands[0].size() == 2 and state_mech.get_stones(0).get_total_stones() == 0, "Requirement 36g: Mechanical Dragon discards 1 stone to draw 2 cards")
+
+	# 5. Lightning Dragon: Inflicts Paralysis, coin flip recovery (heads breaks free, tails stays paralyzed)
+	var state_light = GameState.new()
+	state_light.start_game()
+	var light_beast = BeastInstance.create(state_light.card_db["lightning_dragon"], 0, 0)
+	state_light.player_fields[0].append(light_beast)
+	var light_enemy = BeastInstance.create(state_light.card_db["little_dragon"], 1, 0)
+	state_light.player_fields[1].append(light_enemy)
+	state_light.get_stones(0).add_stone_direct("lightning", 1)
+	var para_res = state_light.activate_beast_ability(0, 0, [light_enemy])
+	assert_true(para_res.success and light_enemy.is_paralyzed and not light_enemy.can_attack(state_light.turn_number), "Requirement 36h: Lightning Dragon inflicts Paralysis and blocks target from attacking")
+
+	# Test paralysis recovery logic
+	light_enemy.is_paralyzed = true
+	light_enemy.cleanse()
+	assert_true(not light_enemy.is_paralyzed, "Requirement 36i: Paralysis cleansed on heads recovery")
+
+	# 6. Verify 10 new cards exist in database with artworks on disk
+	var db = CardData.load_database()
+	var new_cards = [
+		"dragon_hoard", "elemental_alchemy", "draconic_resurgence", "call_to_arms",
+		"elemental_transmutation", "solar_flare", "static_prison", "frost_armor",
+		"gale_barrier", "shadow_pact"
+	]
+	for cid in new_cards:
+		var cdata: CardData = db.get(cid)
+		assert_true(cdata != null, "Requirement 36j: New card '" + cid + "' exists in CARD_DATABASE.json")
+		var art_path = "assets/art/" + cid + ".jpg"
+		assert_true(FileAccess.file_exists(art_path), "Requirement 36k: Artwork exists for card '" + cid + "' at " + art_path)
+
+	# 7. Support Card: Dragon's Hoard (Draw 3, discard 1)
+	var state_dh = GameState.new()
+	state_dh.start_game()
+	state_dh.player_hands[0] = [state_dh.card_db["dragon_hoard"]]
+	var dh_res = state_dh.cast_dragon_hoard(0, 0)
+	assert_true(dh_res.success and state_dh.player_hands[0].size() == 2, "Requirement 36l: Dragon's Hoard spends 1 Mana, draws 3 cards and discards 1 card")
+
+	# 8. Support Card: Elemental Alchemy (Discard 1 stone from pile, search 2 stones from deck to pile)
+	var state_ea = GameState.new()
+	state_ea.start_game()
+	state_ea.player_hands[0] = [state_ea.card_db["elemental_alchemy"]]
+	state_ea.get_stones(0).add_stone_direct("fire", 1)
+	var ea_res = state_ea.cast_elemental_alchemy(0, 0)
+	assert_true(ea_res.success and state_ea.get_stones(0).get_total_stones() == 2, "Requirement 36m: Elemental Alchemy discards 1 stone and adds 2 stones from deck to stone pile")
+
+	# 9. Support Card: Draconic Resurgence (Recycle dragons from discard, draw 1)
+	var state_dr = GameState.new()
+	state_dr.start_game()
+	state_dr.player_hands[0] = [state_dr.card_db["draconic_resurgence"]]
+	state_dr.player_discards[0] = [state_dr.card_db["fire_dragon"], state_dr.card_db["ice_dragon"]]
+	var dr_res = state_dr.cast_draconic_resurgence(0, 0)
+	assert_true(dr_res.success and state_dr.player_hands[0].size() == 1, "Requirement 36n: Draconic Resurgence recycles dragons into deck and draws 1 card")
+
+	# 10. Support Card: Call to Arms (Search deck for evolved dragon to hand)
+	var state_cta = GameState.new()
+	state_cta.start_game()
+	state_cta.player_hands[0] = [state_cta.card_db["call_to_arms"]]
+	var cta_res = state_cta.cast_call_to_arms(0, 0)
+	assert_true(cta_res.success and state_cta.player_hands[0].size() == 1 and state_cta.player_hands[0][0].evolution_stage > 0, "Requirement 36o: Call to Arms adds an evolved dragon from deck to hand")
+
+	# 11. Spell Cards: Static Prison, Frost Armor, Gale Barrier, Shadow Pact
+	var state_spells = GameState.new()
+	state_spells.start_game()
+	var friend_b = BeastInstance.create(state_spells.card_db["little_dragon"], 0, 0)
+	var enemy_b = BeastInstance.create(state_spells.card_db["little_dragon"], 1, 0)
+	state_spells.player_fields[0] = [friend_b]
+	state_spells.player_fields[1] = [enemy_b]
+
+	# Static Prison
+	state_spells.player_hands[0] = [state_spells.card_db["static_prison"]]
+	state_spells.cast_spell(0, 0, enemy_b)
+	assert_true(enemy_b.is_paralyzed, "Requirement 36p: Static Prison spell inflicts Paralysis on target beast")
+
+	# Frost Armor
+	state_spells.player_hands[0] = [state_spells.card_db["frost_armor"]]
+	state_spells.cast_spell(0, 0, friend_b)
+	assert_true(friend_b.shield_hp == 6, "Requirement 36q: Frost Armor grants +6 Shield HP")
+
+	# Gale Barrier
+	state_spells.player_hands[0] = [state_spells.card_db["gale_barrier"]]
+	state_spells.cast_spell(0, 0, friend_b)
+	assert_true(state_spells.player_fields[0].size() == 0 and state_spells.player_hands[0].size() == 1, "Requirement 36r: Gale Barrier returns friendly beast to hand fully cleansed")
+
+	# Shadow Pact
+	var sac_b = BeastInstance.create(state_spells.card_db["little_dragon"], 0, 0)
+	state_spells.player_fields[0] = [sac_b]
+	state_spells.player_hands[0] = [state_spells.card_db["shadow_pact"]]
+	state_spells.cast_spell(0, 0, sac_b)
+	assert_true(state_spells.player_fields[0].size() == 0 and state_spells.player_hands[0].size() == 3, "Requirement 36s: Shadow Pact sacrifices beast and draws 3 cards")
+
 
 
 

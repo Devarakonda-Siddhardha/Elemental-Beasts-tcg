@@ -1,12 +1,12 @@
 class_name AbilityResolver
 extends RefCounted
 
-static func can_activate_ability(beast: BeastInstance, stone_mgr: StoneManager) -> Dictionary:
+static func can_activate_ability(beast: BeastInstance, stone_mgr: StoneManager, hand: Array = []) -> Dictionary:
 	if not beast or not stone_mgr:
 		return {"valid": false, "error": "Invalid arguments"}
 		
 	if not beast.can_use_ability():
-		return {"valid": false, "error": "Beast cannot use ability (stunned or already used this turn)"}
+		return {"valid": false, "error": "Beast cannot use ability (stunned, paralyzed, or already used this turn)"}
 		
 	var ability = beast.card_data.ability
 	if ability.is_empty():
@@ -16,6 +16,19 @@ static func can_activate_ability(beast: BeastInstance, stone_mgr: StoneManager) 
 		return {"valid": false, "error": "Ability is not an activated ability"}
 		
 	var cost = ability.get("cost", {})
+	if ability.get("effect") == "discard_stone_draw_two":
+		var has_hand_stone = false
+		for c in hand:
+			if c is CardData and c.card_type == "stone":
+				has_hand_stone = true
+				break
+		if not has_hand_stone and stone_mgr.get_total_stones() == 0:
+			return {
+				"valid": false,
+				"error": "Requires 1 Element Stone in hand or Stone Pile to discard."
+			}
+		return {"valid": true, "error": ""}
+		
 	if not cost.is_empty() and not stone_mgr.has_stones(cost):
 		return {
 			"valid": false, 
@@ -34,7 +47,7 @@ static func execute_beast_ability(
 	discard: Array,
 	target_enemy_beasts: Array = []
 ) -> Dictionary:
-	var check = can_activate_ability(beast, stone_mgr)
+	var check = can_activate_ability(beast, stone_mgr, hand)
 	if not check.valid:
 		return {"success": false, "error": check.error}
 		
@@ -43,7 +56,18 @@ static func execute_beast_ability(
 	var effect_type = ability.get("effect", "")
 	
 	# Spend required stones
-	if not cost.is_empty():
+	if effect_type == "discard_stone_draw_two":
+		var stone_discarded = false
+		for i in range(hand.size() - 1, -1, -1):
+			var c = hand[i]
+			if c is CardData and c.card_type == "stone":
+				hand.remove_at(i)
+				discard.append(c)
+				stone_discarded = true
+				break
+		if not stone_discarded:
+			stone_mgr.spend_stones({"any_stone": 1})
+	elif not cost.is_empty():
 		if not stone_mgr.spend_stones(cost):
 			return {"success": false, "error": "Failed to spend stones"}
 			
@@ -51,6 +75,28 @@ static func execute_beast_ability(
 	var result_info = {"success": true, "effect": effect_type, "details": ""}
 	
 	match effect_type:
+		"inflict_paralysis":
+			# Lightning Dragon: Paralysis
+			var p_target: BeastInstance = null
+			if target_enemy_beasts.size() > 0 and target_enemy_beasts[0] is BeastInstance:
+				p_target = target_enemy_beasts[0]
+			elif all_enemy_beasts.size() > 0 and all_enemy_beasts[0] is BeastInstance:
+				p_target = all_enemy_beasts[0]
+			if p_target:
+				p_target.is_paralyzed = true
+				result_info["details"] = "Paralysis inflicted on " + p_target.card_data.name + "! Must flip Heads at turn start to break free!"
+			else:
+				result_info["details"] = "Paralysis activated."
+
+		"discard_stone_draw_two":
+			# Mechanical Dragon: Overclock Draw
+			var drawn = 0
+			for _i in range(2):
+				if deck.size() > 0:
+					hand.append(deck.pop_front())
+					drawn += 1
+			result_info["details"] = "Discarded 1 Element Stone and drew " + str(drawn) + " cards!"
+
 		"double_attack":
 			# Wind Dragon: Gale Force
 			beast.max_attacks_per_turn = 2

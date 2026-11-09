@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/eclipse_frost_dragon.jpg-6fb2481e0d64eed476b9
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

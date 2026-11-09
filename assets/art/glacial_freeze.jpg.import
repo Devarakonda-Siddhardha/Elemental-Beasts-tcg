@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/glacial_freeze.jpg-74fff523fd5cb61e12b957aa53
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

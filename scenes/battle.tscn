@@ -815,18 +815,18 @@ text = "☰"
 [node name="SelectedPanel" type="Panel" parent="."]
 visible = false
 layout_mode = 0
-offset_left = 8.0
-offset_top = 96.0
-offset_right = 268.0
-offset_bottom = 452.0
+offset_left = 12.0
+offset_top = 168.0
+offset_right = 244.0
+offset_bottom = 508.0
 theme_override_styles/panel = SubResource("SB_gold_panel")
 
 [node name="PreviewHolder" type="Control" parent="SelectedPanel"]
 layout_mode = 0
-offset_left = 15.0
-offset_top = 26.0
-offset_right = 245.0
-offset_bottom = 346.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 216.0
+offset_bottom = 294.0
 mouse_filter = 2
 
 [node name="Hint" type="Label" parent="SelectedPanel/PreviewHolder"]

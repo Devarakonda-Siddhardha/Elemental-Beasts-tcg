@@ -21,6 +21,7 @@ var summoned_turn: int = 0
 # Status durations (in turns remaining)
 var stun_turns: int = 0
 var freeze_turns: int = 0
+var is_paralyzed: bool = false
 
 # Materials (for Fusion Dragons, holds the underlying base dragons)
 var fusion_materials: Array[CardData] = []
@@ -44,19 +45,24 @@ func get_attack() -> int:
 	return maxi(0, base_attack + bonus_attack)
 
 func is_immune_to_spells() -> bool:
-	if card_data.ability and card_data.ability.get("effect") == "spell_immunity":
+	if not card_data:
+		return false
+	if card_data.id == "mechanical_dragon" or card_data.id == "shadow_dragon":
 		return true
+	if card_data.ability:
+		if card_data.ability.get("spell_immunity", false) == true or card_data.ability.get("effect") == "spell_immunity":
+			return true
 	return false
 
 func can_attack(current_turn: int) -> bool:
-	if stun_turns > 0 or freeze_turns > 0:
+	if stun_turns > 0 or freeze_turns > 0 or is_paralyzed:
 		return false
 	if RulesConfig.SUMMONING_SICKNESS and summoned_turn == current_turn:
 		return false
 	return attacks_performed < max_attacks_per_turn
 
 func can_use_ability() -> bool:
-	if stun_turns > 0:
+	if stun_turns > 0 or is_paralyzed:
 		return false
 	return not ability_used_this_turn
 
@@ -106,3 +112,14 @@ func is_stunned() -> bool:
 func cleanse() -> void:
 	freeze_turns = 0
 	stun_turns = 0
+	is_paralyzed = false
+
+func check_paralysis_recovery() -> Dictionary:
+	if not is_paralyzed:
+		return {"was_paralyzed": false, "recovered": false, "coin": "none"}
+	var is_heads = randf() < 0.5
+	if is_heads:
+		is_paralyzed = false
+		return {"was_paralyzed": true, "recovered": true, "coin": "heads"}
+	else:
+		return {"was_paralyzed": true, "recovered": false, "coin": "tails"}

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/permafrost_shatter.jpg-c242ef9542f2b80bd18c96
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

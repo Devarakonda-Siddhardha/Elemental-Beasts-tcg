@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/frostfang_wyrm.jpg-98c17a560f8a40f5b4359e18a1
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/little_dragon.jpg-908f021a63a66d60d97b39d3dff
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

@@ -13,6 +13,7 @@ signal beast_ascended(player_id: int, beast: BeastInstance)
 signal god_dragon_summoned(player_id: int, beast: BeastInstance)
 signal spell_cast(player_id: int, card: CardData)
 signal realm_changed(player_id: int, realm_card: CardData, replaced_realm: CardData)
+signal paralysis_tested(player_id: int, beast: BeastInstance, recovered: bool, coin: String)
 signal combat_resolved(result: Dictionary)
 signal deck_shuffled(player_id: int)
 signal game_ended(winner_id: int, reason: String)
@@ -191,9 +192,12 @@ func start_turn() -> void:
 	# Rule 2: Stone placement allowance reset
 	player_stones[p].turn_refresh()
 	
-	# Refresh on-field beasts
+	# Refresh on-field beasts and test paralysis recovery via coin flip
 	for b in player_fields[p]:
 		if b is BeastInstance:
+			if b.is_paralyzed:
+				var rec = b.check_paralysis_recovery()
+				paralysis_tested.emit(p, b, rec.recovered, rec.coin)
 			b.turn_refresh()
 			
 	turn_started.emit(turn_number, active_player_id)
@@ -291,6 +295,31 @@ func evolve_beast(player_id: int, beast_field_index: int, evo_card_hand_index: i
 		
 	if EvolutionEngine.execute_evolution(beast, evo_card, stone_mgr, active_realm):
 		hand.remove_at(evo_card_hand_index)
+		
+		# On-Evolve Ability Triggers
+		var evo_ability = evo_card.ability if evo_card.ability else {}
+		var evo_effect = evo_ability.get("effect", "")
+		if evo_card.id == "fire_dragon" or evo_effect == "bonus_attack_on_evolve":
+			beast.bonus_attack += int(evo_ability.get("bonus_attack", 3))
+		elif evo_card.id == "ice_dragon" or evo_effect == "freeze_enemy_on_evolve":
+			var enemy_id = 1 if player_id == 0 else 0
+			if player_fields[enemy_id].size() > 0:
+				var eb: BeastInstance = player_fields[enemy_id][0]
+				eb.freeze_turns = maxi(eb.freeze_turns, int(evo_ability.get("freeze_turns", 1)))
+		elif evo_card.id == "wind_dragon" or evo_effect == "bounce_creature_on_evolve":
+			var enemy_id = 1 if player_id == 0 else 0
+			if player_fields[enemy_id].size() > 0:
+				var bounced: BeastInstance = player_fields[enemy_id].pop_back()
+				bounced.cleanse()
+				player_hands[enemy_id].append(bounced.card_data)
+			elif player_fields[player_id].size() > 1:
+				for bi in range(player_fields[player_id].size()):
+					if player_fields[player_id][bi] != beast:
+						var bounced: BeastInstance = player_fields[player_id].pop_at(bi)
+						bounced.cleanse()
+						player_hands[player_id].append(bounced.card_data)
+						break
+
 		beast_evolved.emit(player_id, beast)
 		card_played.emit(player_id, evo_card)
 		return true
@@ -634,6 +663,210 @@ func cast_elemental_convergence(player_id: int, hand_index: int, chosen_stones: 
 	card_played.emit(player_id, card)
 	return res
 
+func cast_dragon_hoard(player_id: int, hand_index: int, discard_hand_index: int = -1) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "dragon_hoard":
+		return {"success": false, "error": "Card is not Dragon's Hoard"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_discards[player_id].append(card)
+
+	# Draw 3 cards
+	var drawn_cards: Array = []
+	for _i in range(3):
+		var d = draw_card(player_id)
+		if d:
+			drawn_cards.append(d)
+
+	# Discard 1 card from hand
+	var discarded: CardData = null
+	if hand.size() > 0:
+		var d_idx = discard_hand_index
+		if d_idx < 0 or d_idx >= hand.size():
+			d_idx = hand.size() - 1
+		discarded = hand.pop_at(d_idx)
+		player_discards[player_id].append(discarded)
+
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return {
+		"success": true,
+		"drawn": drawn_cards,
+		"discarded": discarded,
+		"details": "Drew " + str(drawn_cards.size()) + " cards and discarded " + (discarded.name if discarded else "none") + "."
+	}
+
+func cast_elemental_alchemy(player_id: int, hand_index: int, discard_stone_elem: String = "") -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "elemental_alchemy":
+		return {"success": false, "error": "Card is not Elemental Alchemy"}
+
+	var stone_mgr = player_stones[player_id]
+	if stone_mgr.get_total_stones() < 1:
+		return {"success": false, "error": "Requires at least 1 Element Stone in your Stone Pile to discard"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_discards[player_id].append(card)
+
+	# Discard 1 stone from stone pile
+	var spent_elem = ""
+	if discard_stone_elem != "" and stone_mgr.get_stone_count(discard_stone_elem) > 0:
+		spent_elem = discard_stone_elem
+		stone_mgr.spend_stones({spent_elem: 1})
+	else:
+		for elem in stone_mgr.stone_pile.keys():
+			if stone_mgr.get_stone_count(elem) > 0:
+				spent_elem = elem
+				stone_mgr.spend_stones({spent_elem: 1})
+				break
+
+	# Search deck for up to 2 stone cards and add to stone pile
+	var deck = player_decks[player_id]
+	var added_stones: Array = []
+	for i in range(deck.size() - 1, -1, -1):
+		var dc = deck[i]
+		if dc is CardData and dc.card_type == "stone":
+			added_stones.append(dc)
+			deck.remove_at(i)
+			stone_mgr.add_stone_direct(dc.element, 1)
+			if added_stones.size() >= 2:
+				break
+
+	deck.shuffle()
+	deck_shuffled.emit(player_id)
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return {
+		"success": true,
+		"discarded_element": spent_elem,
+		"added_stones": added_stones,
+		"details": "Discarded 1 " + spent_elem.capitalize() + " Stone and extracted " + str(added_stones.size()) + " Stones from deck to Stone Pile."
+	}
+
+func cast_draconic_resurgence(player_id: int, hand_index: int, chosen_dragons: Array = []) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "draconic_resurgence":
+		return {"success": false, "error": "Card is not Draconic Resurgence"}
+
+	var discard = player_discards[player_id]
+	var dragon_count = 0
+	for dc in discard:
+		if dc is CardData and dc.card_type == "beast":
+			dragon_count += 1
+	if dragon_count == 0:
+		return {"success": false, "error": "No Dragon Beasts in your discard pile to recover"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+
+	# Take up to 2 dragons from discard back into deck
+	var recycled: Array = []
+	var deck = player_decks[player_id]
+	if chosen_dragons.size() > 0:
+		for cd in chosen_dragons:
+			if cd in discard:
+				discard.erase(cd)
+				deck.append(cd)
+				recycled.append(cd)
+				if recycled.size() >= 2:
+					break
+	else:
+		for i in range(discard.size() - 1, -1, -1):
+			var dc = discard[i]
+			if dc is CardData and dc.card_type == "beast":
+				discard.remove_at(i)
+				deck.append(dc)
+				recycled.append(dc)
+				if recycled.size() >= 2:
+					break
+
+	discard.append(card)
+	deck.shuffle()
+	deck_shuffled.emit(player_id)
+	var drawn = draw_card(player_id)
+
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return {
+		"success": true,
+		"recycled": recycled,
+		"drawn": drawn,
+		"details": "Recycled " + str(recycled.size()) + " Dragon(s) into deck and drew 1 card."
+	}
+
+func cast_call_to_arms(player_id: int, hand_index: int, chosen_dragon: CardData = null) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.id != "call_to_arms":
+		return {"success": false, "error": "Card is not Dragon Call to Arms"}
+
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana (requires " + str(card.mana_cost) + " Mana)"}
+
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_discards[player_id].append(card)
+
+	var deck = player_decks[player_id]
+	var selected_card: CardData = null
+	if chosen_dragon and chosen_dragon in deck:
+		deck.erase(chosen_dragon)
+		selected_card = chosen_dragon
+	else:
+		for i in range(deck.size()):
+			var dc = deck[i]
+			if dc is CardData and dc.card_type == "beast" and dc.evolution_stage > 0:
+				selected_card = dc
+				deck.remove_at(i)
+				break
+
+	if selected_card:
+		hand.append(selected_card)
+		deck.shuffle()
+		deck_shuffled.emit(player_id)
+
+	spell_cast.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return {
+		"success": true,
+		"card": selected_card,
+		"details": ("Added " + selected_card.name + " to hand from deck." if selected_card else "No evolved dragons found in deck.")
+	}
+
 
 func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = null) -> Dictionary:
 	if player_id != active_player_id or is_game_over:
@@ -645,9 +878,9 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 	if card.card_type != "spell":
 		return {"success": false, "error": "Card is not a spell"}
 		
-	# Check Spell Immunity (Shadow Dragon)
+	# Check Spell Immunity (Mechanical Dragon / Shadow Dragon)
 	if target_beast and target_beast.is_immune_to_spells():
-		return {"success": false, "error": target_beast.card_data.name + " is immune to all Spell cards (Cloak of Darkness)!"}
+		return {"success": false, "error": target_beast.card_data.name + " is immune to all Spell cards!"}
 		
 	var mana_mgr = player_mana[player_id]
 	if not mana_mgr.can_spend(card.mana_cost):
@@ -770,6 +1003,59 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 				player_fields[player_id][0].shield_hp += shd
 			else:
 				heal_player(player_id, heal)
+		"buff_attack_shield":
+			var atk = card.ability.get("bonus_attack", 2)
+			var shd = card.ability.get("bonus_shield", 4)
+			if target_beast:
+				target_beast.bonus_attack += atk
+				target_beast.shield_hp += shd
+			elif player_fields[player_id].size() > 0:
+				player_fields[player_id][0].bonus_attack += atk
+				player_fields[player_id][0].shield_hp += shd
+		"cleave_damage":
+			var main_dmg = card.ability.get("damage", 4)
+			var aoe_dmg = card.ability.get("aoe_damage", 2)
+			var enemy_id = 1 if player_id == 0 else 0
+			if target_beast:
+				target_beast.take_damage(main_dmg)
+				for eb in player_fields[enemy_id]:
+					if eb is BeastInstance and eb != target_beast and not eb.is_dead():
+						eb.take_damage(aoe_dmg)
+			else:
+				deal_player_damage(enemy_id, main_dmg)
+				for eb in player_fields[enemy_id]:
+					if eb is BeastInstance and not eb.is_dead():
+						eb.take_damage(aoe_dmg)
+		"inflict_paralysis":
+			if target_beast:
+				target_beast.is_paralyzed = true
+			elif player_fields[1 if player_id == 0 else 0].size() > 0:
+				player_fields[1 if player_id == 0 else 0][0].is_paralyzed = true
+		"frost_armor":
+			var shd = card.ability.get("bonus_shield", 6)
+			if target_beast:
+				target_beast.shield_hp += shd
+			elif player_fields[player_id].size() > 0:
+				player_fields[player_id][0].shield_hp += shd
+		"bounce_friendly_beast":
+			if target_beast and target_beast in player_fields[player_id]:
+				player_fields[player_id].erase(target_beast)
+				target_beast.cleanse()
+				target_beast.current_hp = target_beast.max_hp
+				player_hands[player_id].append(target_beast.card_data)
+			elif player_fields[player_id].size() > 0:
+				var b = player_fields[player_id].pop_back()
+				b.cleanse()
+				b.current_hp = b.max_hp
+				player_hands[player_id].append(b.card_data)
+		"sacrifice_beast_draw_mana":
+			if player_fields[player_id].size() > 0:
+				var sac_target = target_beast if (target_beast and target_beast in player_fields[player_id]) else player_fields[player_id][0]
+				player_fields[player_id].erase(sac_target)
+				player_discards[player_id].append(sac_target.card_data)
+			for _i in range(3):
+				draw_card(player_id)
+			player_mana[player_id].add(2)
 				
 	cleanup_dead_beasts()
 	spell_cast.emit(player_id, card)

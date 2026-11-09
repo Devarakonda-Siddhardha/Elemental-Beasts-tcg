@@ -146,13 +146,23 @@ func _get_symbolic_effect_text() -> String:
 		"elemental_convergence": return "✦ Search Deck ➔ +2 ◈ Stones"
 		"dragon_elixir": return "♥ +5 HP to Beast"
 		"elemental_shield": return "❖ +4 Shield HP"
+		"dragon_hoard": return "✦ Draw 3 Cards, Discard 1"
+		"elemental_alchemy": return "◈ -1 Stone ➔ Search +2 ◈ Stones"
+		"draconic_resurgence": return "✦ Recycle 2 Dragons ➔ +1 Card"
+		"call_to_arms": return "✦ Search Deck ➔ +1 Evolved Dragon"
+		"elemental_transmutation": return "⚔ +2 ATK  •  ❖ +4 Shield"
+		"solar_flare": return "⚔ 4 Target  •  ⚔ 2 Other Foes"
+		"static_prison": return "⚡ Paralysis (Flip Heads to Free)"
+		"frost_armor": return "❖ +6 Shield  •  ❄ Freezes Attacker"
+		"gale_barrier": return "🌪️ Return Friendly ➔ Cleanse & Heal"
+		"shadow_pact": return "☾ Sac Friendly ➔ +3 Cards, +2 💧"
 		"little_dragon": return "Evolve into any Elemental Dragon (2× ◈)"
 		"shadow_dragon": return "☾ Spell Immune"
-		"wind_dragon": return "◈ -1 ➔ +1 ⚔×2 this turn"
-		"fire_dragon": return "☀◈ -1 ➔ ⚔ 4 Direct Damage"
-		"lightning_dragon": return "⚡◈ -1 ➔ ⚔ 2 to All Foes"
-		"ice_dragon": return "❄◈ -1 ➔ ❄ Freeze 1 enemy"
-		"mechanical_dragon": return "⚙◈ -1 ➔ ⚔ +3 ATK (1T)"
+		"wind_dragon": return "🌪️ On Evolve: Return 1 Beast to Hand"
+		"fire_dragon": return "🔥 On Evolve: +3 ATK that turn"
+		"lightning_dragon": return "⚡◈ -1 ➔ ⚡ Paralysis (Coin Flip)"
+		"ice_dragon": return "❄ On Evolve: Freeze 1 Enemy (1T)"
+		"mechanical_dragon": return "⚙ Discard 1 Stone ➔ +2 Cards  •  ☾ Spell Immune"
 		"water_dragon": return "◈ -1 ➔ ♥ +5 HP"
 		"volcovolt_dragon": return "☀⚡◈ -1 each ➔ ⚔ 8 (×2) + ⚡ Stun"
 		"spark_wraith_dragon": return "☾⚡◈ -1 each ➔ ❖ Recover 2 Spells"
@@ -624,7 +634,11 @@ func set_attack_ready(ready_to_attack: bool) -> void:
 		attack_glow.visible = ready_to_attack
 
 func set_status_display(status_name: String, turns: int) -> void:
-	if turns > 0:
+	if status_name == "paralysis" or status_name == "paralyzed":
+		status_overlay.visible = true
+		status_label.text = "⚡ PARALYSIS"
+		status_overlay.color = Color(0.9, 0.75, 0.1, 0.5)
+	elif turns > 0:
 		status_overlay.visible = true
 		status_label.text = status_name.to_upper() + " (" + str(turns) + ")"
 		if status_name == "freeze":

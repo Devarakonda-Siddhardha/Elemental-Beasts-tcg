@@ -26,6 +26,9 @@ func add(amount: int) -> void:
 	current_mana += amount
 	mana_changed.emit(current_mana, max_mana)
 
+func add_mana(amount: int) -> void:
+	add(amount)
+
 func reset() -> void:
 	current_mana = RulesConfig.STARTING_MANA
 	max_mana = RulesConfig.MAX_NORMAL_MANA

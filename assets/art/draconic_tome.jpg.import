@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/draconic_tome.jpg-4a65fc5ceb607fcdf9c94ffb741
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

@@ -13,11 +13,12 @@ var card_ui_prefab = preload("res://scenes/card_ui.tscn")
 var selected_hand_card_ui: CardUI = null
 var selected_field_beast_ui: CardUI = null
 var current_action_mode: String = "none" # "none", "evolving", "fusing", "attacking", "targeting_spell", "targeting_ability"
+var selected_ability_beast_index: int = -1
 
 # UI Nodes
 const FIELD_CARD_SCALE: float = 0.64
 const HAND_CARD_SCALE: float = 0.6
-const PREVIEW_CARD_SCALE: float = 1.15
+const PREVIEW_CARD_SCALE: float = 1.0
 const ELEMENT_UI_COLORS = {
 	"fire": Color(1.0, 0.4, 0.2), "lightning": Color(1.0, 0.85, 0.2), "wind": Color(0.3, 0.95, 0.55),
 	"ice": Color(0.4, 0.85, 1.0), "shadow": Color(0.78, 0.45, 1.0), "mechanical": Color(0.85, 0.8, 0.75)
@@ -75,6 +76,7 @@ func _ready() -> void:
 	game_state.god_dragon_summoned.connect(_on_god_dragon_summoned)
 	game_state.combat_resolved.connect(_on_combat_resolved)
 	game_state.deck_shuffled.connect(_on_deck_shuffled)
+	game_state.paralysis_tested.connect(_on_paralysis_tested)
 	game_state.game_ended.connect(_on_game_ended)
 	
 	if not end_turn_button.pressed.is_connected(_on_end_turn_pressed):
@@ -646,13 +648,43 @@ func _on_hand_card_fan_hover(hovered_idx: int, is_hovered: bool) -> void:
 		tw.tween_property(cui, "position", target_pos, 0.14)
 		tw.parallel().tween_property(cui, "rotation_degrees", target_rot, 0.14)
 
+func _format_ability_cost(cost: Dictionary) -> String:
+	if cost.is_empty():
+		return "Free"
+	var parts: Array = []
+	for elem in cost.keys():
+		var amt = cost[elem]
+		var elem_icon = ""
+		match elem:
+			"fire": elem_icon = "🔥 Fire"
+			"water": elem_icon = "💧 Water"
+			"ice": elem_icon = "❄️ Ice"
+			"wind": elem_icon = "🌪️ Wind"
+			"lightning": elem_icon = "⚡ Lightning"
+			"shadow": elem_icon = "🌑 Shadow"
+			"mechanical": elem_icon = "⚙️ Mech"
+			"any_stone": elem_icon = "💎 Any Stone"
+			_: elem_icon = elem.capitalize()
+		parts.append(str(amt) + " " + elem_icon)
+	return ", ".join(parts)
+
+func _on_paralysis_tested(player_id: int, beast: BeastInstance, recovered: bool, coin: String) -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_coin_flip()
+	var p_name = "Your" if player_id == 0 else "Opponent's"
+	if recovered:
+		log_message("  🪙 [b]" + p_name + " " + beast.card_data.name + "[/b] flipped [b]HEADS[/b]! Paralysis broken! ⚡➔✨")
+	else:
+		log_message("  🪙 [b]" + p_name + " " + beast.card_data.name + "[/b] flipped [b]TAILS[/b]! Remains Paralyzed this turn! ⚡")
+
 func refresh_fields() -> void:
 	for child in player_field_container.get_children():
 		child.queue_free()
 	for i in range(game_state.player_fields[0].size()):
 		var b: BeastInstance = game_state.player_fields[0][i]
 		var c_ui: CardUI = card_ui_prefab.instantiate()
-		player_field_container.add_child(_wrap_card(c_ui, FIELD_CARD_SCALE))
+		var wrapper = _wrap_card(c_ui, FIELD_CARD_SCALE)
+		player_field_container.add_child(wrapper)
 		c_ui.setup_from_beast(b)
 		if c_ui.has_method("set_compact"):
 			c_ui.set_compact(true)
@@ -661,9 +693,49 @@ func refresh_fields() -> void:
 			c_ui.set_status_display("stun", b.stun_turns)
 		elif b.freeze_turns > 0:
 			c_ui.set_status_display("freeze", b.freeze_turns)
+		elif b.is_paralyzed:
+			c_ui.set_status_display("paralysis", 0)
 		var f_idx = i
 		c_ui.card_clicked.connect(func(c): _on_player_field_clicked(c, f_idx))
 		c_ui.card_right_clicked.connect(func(c): _on_player_field_right_clicked(c, f_idx))
+
+		# Visible ability activation button directly on the beast card wrapper
+		if b.card_data.ability and b.card_data.ability.get("trigger") == "activated":
+			var abil_btn = Button.new()
+			abil_btn.name = "AbilityButton"
+			var abil_name = b.card_data.ability.get("name", "Ability")
+			abil_btn.text = "⚡ " + abil_name.to_upper()
+			abil_btn.custom_minimum_size = Vector2(120, 24)
+			abil_btn.position = Vector2(4, 150)
+			abil_btn.z_index = 5
+
+			var sb = StyleBoxFlat.new()
+			sb.bg_color = Color(0.08, 0.18, 0.32, 0.95)
+			sb.border_color = Color(0.35, 0.85, 1.0, 0.95)
+			sb.set_border_width_all(2)
+			sb.set_corner_radius_all(4)
+			sb.content_margin_left = 4
+			sb.content_margin_right = 4
+			sb.content_margin_top = 2
+			sb.content_margin_bottom = 2
+			abil_btn.add_theme_stylebox_override("normal", sb)
+
+			var sb_h = sb.duplicate()
+			sb_h.bg_color = Color(0.18, 0.38, 0.68, 1.0)
+			sb_h.border_color = Color(0.7, 0.98, 1.0, 1.0)
+			abil_btn.add_theme_stylebox_override("hover", sb_h)
+			abil_btn.add_theme_font_size_override("font_size", 10)
+
+			var check = AbilityResolver.can_activate_ability(b, game_state.player_stones[0], game_state.player_hands[0])
+			if not check.valid or game_state.active_player_id != 0:
+				abil_btn.modulate = Color(0.65, 0.65, 0.65, 0.6)
+				abil_btn.tooltip_text = check.error if not check.valid else "Not your turn"
+			else:
+				abil_btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+				abil_btn.tooltip_text = "Activate " + abil_name + " (" + _format_ability_cost(b.card_data.ability.get("cost", {})) + ")"
+
+			abil_btn.pressed.connect(func(): _on_beast_ability_triggered(f_idx))
+			wrapper.add_child(abil_btn)
 
 	for child in opponent_field_container.get_children():
 		child.queue_free()
@@ -678,6 +750,8 @@ func refresh_fields() -> void:
 			c_ui.set_status_display("stun", b.stun_turns)
 		elif b.freeze_turns > 0:
 			c_ui.set_status_display("freeze", b.freeze_turns)
+		elif b.is_paralyzed:
+			c_ui.set_status_display("paralysis", 0)
 		var f_idx = i
 		c_ui.card_clicked.connect(func(c): _on_opponent_field_clicked(c, f_idx))
 
@@ -958,7 +1032,76 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		)
 		return
 
-		
+	# If Dragon's Hoard -> Draw 3 cards, discard 1 card (1 Mana)
+	if card.id == "dragon_hoard":
+		var res_dh = game_state.cast_dragon_hoard(0, hand_index)
+		if res_dh.success:
+			_animate_hand_fan = true
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+				get_node("/root/SoundManager").play_mana_spend()
+			log_message("  ✦ Dragon's Hoard: " + res_dh.details)
+			refresh_full_ui()
+		else:
+			log_message("[color=#e76f51]  ⚠️ " + res_dh.error + "[/color]")
+		return
+
+	# If Elemental Alchemy -> Discard 1 Stone from stone pile, search deck for 2 stones (1 Mana)
+	if card.id == "elemental_alchemy":
+		var res_ea = game_state.cast_elemental_alchemy(0, hand_index)
+		if res_ea.success:
+			_animate_hand_fan = true
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+				get_node("/root/SoundManager").play_mana_spend()
+			log_message("  ✦ Elemental Alchemy: " + res_ea.details)
+			refresh_full_ui()
+		else:
+			log_message("[color=#e76f51]  ⚠️ " + res_ea.error + "[/color]")
+		return
+
+	# If Draconic Resurgence -> Recycle 2 dragons from discard into deck, draw 1 card (1 Mana)
+	if card.id == "draconic_resurgence":
+		var res_dr = game_state.cast_draconic_resurgence(0, hand_index)
+		if res_dr.success:
+			_animate_hand_fan = true
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+				get_node("/root/SoundManager").play_mana_spend()
+			log_message("  ✦ Draconic Resurgence: " + res_dr.details)
+			refresh_full_ui()
+		else:
+			log_message("[color=#e76f51]  ⚠️ " + res_dr.error + "[/color]")
+		return
+
+	# If Call to Arms -> Search deck for 1 evolved Dragon card to hand (1 Mana)
+	if card.id == "call_to_arms":
+		var evolved_dragons: Array = []
+		for dc in game_state.get_deck(0):
+			if dc is CardData and dc.card_type == "beast" and dc.evolution_stage > 0:
+				evolved_dragons.append(dc)
+		if evolved_dragons.is_empty():
+			var res_cta_empty = game_state.cast_call_to_arms(0, hand_index)
+			log_message("[color=#e76f51]  ⚠️ " + res_cta_empty.details + "[/color]")
+			refresh_full_ui()
+			return
+		open_deck_search_modal(
+			"✦ CALL TO ARMS — SELECT AN EVOLVED DRAGON FROM YOUR DECK ✦",
+			evolved_dragons,
+			func(chosen_dragon: CardData):
+				var cur_idx = game_state.get_hand(0).find(card)
+				if cur_idx != -1:
+					var res_cta = game_state.cast_call_to_arms(0, cur_idx, chosen_dragon)
+					if res_cta.success:
+						_animate_hand_fan = true
+						if has_node("/root/SoundManager"):
+							get_node("/root/SoundManager").play_spell()
+							get_node("/root/SoundManager").play_mana_spend()
+						log_message("  ✦ Dragon Call to Arms: " + res_cta.details)
+					refresh_full_ui()
+		)
+		return
+
 	# If Evolution card -> enter evolving mode
 	if card.evolution_stage == 1:
 		selected_hand_card_ui = card_ui
@@ -1100,29 +1243,171 @@ func _on_player_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		refresh_full_ui()
 		return
 
-	# Select beast to attack with
-	if beast.can_attack(game_state.turn_number) and game_state.active_player_id == 0:
+	# Beast action selection
+	var can_atk = beast.can_attack(game_state.turn_number) and game_state.active_player_id == 0
+	var has_activated_ability = beast.card_data.ability and beast.card_data.ability.get("trigger") == "activated"
+	var can_abil = has_activated_ability and beast.can_use_ability() and game_state.active_player_id == 0
+
+	if can_atk and can_abil:
+		open_beast_action_modal(field_index)
+		return
+	elif can_atk:
 		selected_field_beast_ui = card_ui
 		current_action_mode = "attacking"
 		prompt_banner.text = "Select an enemy beast to attack, or click enemy player for direct attack!"
 		prompt_banner.visible = true
 		return
+	elif can_abil:
+		_on_beast_ability_triggered(field_index)
+		return
+
+func open_beast_action_modal(field_index: int) -> void:
+	if has_node("BeastActionModal"):
+		get_node("BeastActionModal").queue_free()
+
+	var beast: BeastInstance = game_state.player_fields[0][field_index]
+	var ability = beast.card_data.ability if beast.card_data.ability else {}
+	var abil_name = ability.get("name", "Ability")
+	var abil_cost = _format_ability_cost(ability.get("cost", {}))
+	var abil_desc = ability.get("description", "")
+
+	var modal = ColorRect.new()
+	modal.name = "BeastActionModal"
+	modal.color = Color(0.02, 0.02, 0.06, 0.8)
+	modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	modal.z_index = 50
+	add_child(modal)
+
+	var panel = PanelContainer.new()
+	panel.custom_minimum_size = Vector2(520, 250)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.position = Vector2((1280 - 520) / 2.0, (720 - 250) / 2.0)
+
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.1, 0.16, 0.98)
+	sb.border_color = Color(0.3, 0.8, 1.0, 1.0)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(12)
+	sb.content_margin_left = 24
+	sb.content_margin_right = 24
+	sb.content_margin_top = 20
+	sb.content_margin_bottom = 20
+	panel.add_theme_stylebox_override("panel", sb)
+	modal.add_child(panel)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "✦ " + beast.card_data.name.to_upper() + " — CHOOSE ACTION ✦"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.42))
+	vbox.add_child(title)
+
+	var desc = Label.new()
+	desc.text = "Attack Power: " + str(beast.get_attack()) + "  |  HP: " + str(beast.current_hp) + "/" + str(beast.max_hp) + "\nAbility: " + abil_name + " (Cost: " + abil_cost + ")\n" + abil_desc
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.add_theme_font_size_override("font_size", 13)
+	desc.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
+	vbox.add_child(desc)
+
+	var hbox = HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 16)
+	vbox.add_child(hbox)
+
+	var btn_attack = Button.new()
+	btn_attack.text = "⚔️ Attack Enemy (" + str(beast.get_attack()) + " ATK)"
+	btn_attack.custom_minimum_size = Vector2(170, 42)
+	btn_attack.pressed.connect(func():
+		modal.queue_free()
+		selected_field_beast_ui = null
+		for child in player_field_container.get_children():
+			var c = child.get_child(0)
+			if c is CardUI and c.beast_instance_ref == beast:
+				selected_field_beast_ui = c
+				break
+		current_action_mode = "attacking"
+		prompt_banner.text = "Select an enemy beast to attack, or click enemy player for direct attack!"
+		prompt_banner.visible = true
+	)
+	hbox.add_child(btn_attack)
+
+	var btn_abil = Button.new()
+	btn_abil.text = "⚡ Activate Ability"
+	btn_abil.custom_minimum_size = Vector2(170, 42)
+	var check = AbilityResolver.can_activate_ability(beast, game_state.player_stones[0], game_state.player_hands[0])
+	if not check.valid:
+		btn_abil.disabled = true
+		btn_abil.tooltip_text = check.error
+	btn_abil.pressed.connect(func():
+		modal.queue_free()
+		_on_beast_ability_triggered(field_index)
+	)
+	hbox.add_child(btn_abil)
+
+	var btn_cancel = Button.new()
+	btn_cancel.text = "✖ Cancel"
+	btn_cancel.custom_minimum_size = Vector2(80, 42)
+	btn_cancel.pressed.connect(func():
+		modal.queue_free()
+	)
+	hbox.add_child(btn_cancel)
+
+func _on_beast_ability_triggered(field_index: int) -> void:
+	if game_state.active_player_id != 0 or game_state.is_game_over:
+		return
+	if field_index < 0 or field_index >= game_state.player_fields[0].size():
+		return
+	var beast: BeastInstance = game_state.player_fields[0][field_index]
+	var check = AbilityResolver.can_activate_ability(beast, game_state.player_stones[0], game_state.player_hands[0])
+	if not check.valid:
+		log_message("[color=#e76f51]  ⚠️ " + check.error + "[/color]")
+		return
+
+	var ability = beast.card_data.ability if beast.card_data.ability else {}
+	var effect = ability.get("effect", "")
+	var needs_target = effect in ["inflict_paralysis", "volcanic_storm", "emp_railgun"]
+
+	if needs_target and game_state.player_fields[1].size() > 0:
+		current_action_mode = "targeting_ability"
+		selected_ability_beast_index = field_index
+		prompt_banner.text = "⚡ Select target enemy beast for " + beast.card_data.name + "'s " + ability.get("name", "Ability") + "!"
+		prompt_banner.visible = true
+	else:
+		var res = game_state.activate_beast_ability(0, field_index)
+		if res.success:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+			log_message("  ⚡ [b]" + beast.card_data.name + "[/b]: " + res.details)
+			refresh_full_ui()
+		else:
+			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
 
 func _on_player_field_right_clicked(card_ui: CardUI, field_index: int) -> void:
 	# Right click activates beast special ability
 	if game_state.active_player_id != 0 or game_state.is_game_over:
 		return
-	var beast = game_state.player_fields[0][field_index]
-	var res = game_state.activate_beast_ability(0, field_index)
-	if res.success:
-		if has_node("/root/SoundManager"):
-			get_node("/root/SoundManager").play_spell()
-		log_message("  ⚡ [b]" + beast.card_data.name + "[/b]: " + res.details)
-		refresh_full_ui()
-	else:
-		log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
+	_on_beast_ability_triggered(field_index)
 
 func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
+	if current_action_mode == "targeting_ability" and selected_ability_beast_index != -1:
+		var target = game_state.player_fields[1][field_index]
+		var beast = game_state.player_fields[0][selected_ability_beast_index]
+		var res = game_state.activate_beast_ability(0, selected_ability_beast_index, [target])
+		if res.success:
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_spell()
+			log_message("  ⚡ [b]" + beast.card_data.name + "[/b]: " + res.details)
+		else:
+			log_message("[color=#e76f51]  ⚠️ " + res.error + "[/color]")
+		reset_action_mode()
+		refresh_full_ui()
+		return
+
 	if current_action_mode == "attacking" and selected_field_beast_ui:
 		var attacker = selected_field_beast_ui.beast_instance_ref
 		var defender = game_state.player_fields[1][field_index]
@@ -1137,7 +1422,7 @@ func _on_opponent_field_clicked(card_ui: CardUI, field_index: int) -> void:
 		reset_action_mode()
 		refresh_full_ui()
 		return
-		
+
 	if current_action_mode == "targeting_spell" and selected_hand_card_ui:
 		var target = game_state.player_fields[1][field_index]
 		var hand = game_state.get_hand(0)
@@ -1191,6 +1476,7 @@ func reset_action_mode() -> void:
 	current_action_mode = "none"
 	selected_hand_card_ui = null
 	selected_field_beast_ui = null
+	selected_ability_beast_index = -1
 	prompt_banner.visible = false
 
 func _on_end_turn_pressed() -> void:
