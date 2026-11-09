@@ -1,13 +1,29 @@
 class_name MainMenu
 extends Control
 
-@onready var vs_ai_button: Button = $VBoxContainer/VsAIButton
-@onready var pvp_button: Button = $VBoxContainer/PvPButton
-@onready var pack_opening_button: Button = $VBoxContainer/PackOpeningButton
+# Primary Center Action Buttons (Matching Reference Design)
+@onready var play_button: Button = $VBoxContainer/PlayButton
 @onready var collection_button: Button = $VBoxContainer/CollectionButton
-@onready var deck_builder_button: Button = $VBoxContainer/DeckBuilderButton
 @onready var test_suite_button: Button = $VBoxContainer/TestSuiteButton
-@onready var quit_button: Button = $VBoxContainer/QuitButton
+
+# Top Bar Elements
+@onready var quit_button: Button = $QuitButton
+@onready var player_profile: PanelContainer = $PlayerProfile
+
+# Play Submodal & Mode Buttons
+@onready var play_sub_modal: Control = $PlaySubModal
+@onready var vs_ai_button: Button = $PlaySubModal/Panel/VBox/VsAIButton
+@onready var pvp_button: Button = $PlaySubModal/Panel/VBox/PvPButton
+@onready var close_play_modal_btn: Button = $PlaySubModal/Panel/VBox/ClosePlayModalBtn
+@onready var play_dimmer: ColorRect = $PlaySubModal/Dimmer
+
+# Collection Submodal & Feature Buttons
+@onready var collection_sub_modal: Control = $CollectionSubModal
+@onready var collection_archive_btn: Button = $CollectionSubModal/Panel/VBox/CollectionArchiveBtn
+@onready var deck_builder_button: Button = $CollectionSubModal/Panel/VBox/DeckBuilderBtn
+@onready var pack_opening_button: Button = $CollectionSubModal/Panel/VBox/PackOpeningBtn
+@onready var close_collection_modal_btn: Button = $CollectionSubModal/Panel/VBox/CloseCollectionModalBtn
+@onready var collection_dimmer: ColorRect = $CollectionSubModal/Dimmer
 
 var _toast_panel: PanelContainer = null
 var _portal_frames: Array[Texture2D] = []
@@ -22,28 +38,48 @@ func _ready() -> void:
 		if sm.has_method("play_bgm"):
 			sm.play_bgm("main_menu_theme")
 
-	vs_ai_button.pressed.connect(_on_vs_ai_pressed)
-	pvp_button.pressed.connect(_on_pvp_pressed)
-	if pack_opening_button:
-		pack_opening_button.pressed.connect(_on_pack_opening_pressed)
-	deck_builder_button.pressed.connect(_on_deck_builder_pressed)
+	# Primary Buttons
+	play_button.pressed.connect(_on_play_pressed)
 	collection_button.pressed.connect(_on_collection_pressed)
 	test_suite_button.pressed.connect(_on_test_suite_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 
-	# Setup subtle hover scale/glow feedback on all menu buttons
+	# Play Submodal
+	vs_ai_button.pressed.connect(_on_vs_ai_pressed)
+	pvp_button.pressed.connect(_on_pvp_pressed)
+	close_play_modal_btn.pressed.connect(func(): _hide_sub_modal(play_sub_modal))
+	play_dimmer.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed:
+			_hide_sub_modal(play_sub_modal)
+	)
+
+	# Collection Submodal
+	collection_archive_btn.pressed.connect(_on_collection_archive_pressed)
+	deck_builder_button.pressed.connect(_on_deck_builder_pressed)
+	if pack_opening_button:
+		pack_opening_button.pressed.connect(_on_pack_opening_pressed)
+	close_collection_modal_btn.pressed.connect(func(): _hide_sub_modal(collection_sub_modal))
+	collection_dimmer.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed:
+			_hide_sub_modal(collection_sub_modal)
+	)
+
+	# Setup subtle hover scale/glow feedback on all buttons
 	var menu_buttons: Array[Button] = [
+		play_button,
+		collection_button,
+		test_suite_button,
+		quit_button,
 		vs_ai_button,
 		pvp_button,
-		pack_opening_button,
-		collection_button,
+		close_play_modal_btn,
+		collection_archive_btn,
 		deck_builder_button,
-		test_suite_button,
-		quit_button
+		pack_opening_button,
+		close_collection_modal_btn
 	]
 	for btn in menu_buttons:
 		if btn:
-			btn.pivot_offset = Vector2(195.0, 19.0)
 			btn.mouse_entered.connect(_on_button_hover.bind(btn, true))
 			btn.mouse_exited.connect(_on_button_hover.bind(btn, false))
 
@@ -82,13 +118,75 @@ func _on_button_hover(btn: Button, is_hovered: bool) -> void:
 		tw.tween_property(btn, "scale", Vector2.ONE, 0.14)
 		tw.parallel().tween_property(btn, "modulate", Color.WHITE, 0.14)
 
+func _show_sub_modal(modal: Control) -> void:
+	if not modal:
+		return
+	modal.visible = true
+	modal.modulate.a = 0.0
+	var panel = modal.get_node_or_null("Panel")
+	if panel:
+		panel.pivot_offset = panel.size * 0.5
+		panel.scale = Vector2(0.92, 0.92)
+	var tw = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tw.tween_property(modal, "modulate:a", 1.0, 0.16)
+	if panel:
+		tw.parallel().tween_property(panel, "scale", Vector2.ONE, 0.16)
+
+func _hide_sub_modal(modal: Control) -> void:
+	if not modal:
+		return
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	modal.visible = false
+
+func _on_play_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	_show_sub_modal(play_sub_modal)
+
+func _on_collection_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	_show_sub_modal(collection_sub_modal)
+
 func _on_vs_ai_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	_hide_sub_modal(play_sub_modal)
 	_show_starter_deck_selector(true)
 
 func _on_pvp_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	_hide_sub_modal(play_sub_modal)
 	_show_starter_deck_selector(false)
+
+func _on_collection_archive_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	get_tree().change_scene_to_file("res://scenes/card_collection.tscn")
+
+func _on_deck_builder_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	get_tree().change_scene_to_file("res://scenes/deck_builder.tscn")
+
+func _on_pack_opening_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	get_tree().change_scene_to_file("res://scenes/pack_opening.tscn")
+
+func _on_test_suite_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		var sm = get_node("/root/SoundManager")
+		sm.play_ui_click()
+		if sm.has_method("show_audio_settings_modal"):
+			sm.show_audio_settings_modal(self)
+
+func _on_quit_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	get_tree().quit()
 
 func _show_starter_deck_selector(vs_ai: bool) -> void:
 	if has_node("DeckSelectModal"):
@@ -191,7 +289,6 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 		card_btn.add_theme_stylebox_override("hover", b_hover)
 		card_btn.add_theme_stylebox_override("pressed", b_hover)
 
-		# Subtle darkened dragon art backdrop inside the button
 		var bg_art_path := "res://assets/art/" + main_dragon_id + ".jpg"
 		if ResourceLoader.exists(bg_art_path):
 			var bg_art := TextureRect.new()
@@ -200,102 +297,72 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 			bg_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			bg_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			bg_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			bg_art.modulate = Color(0.32, 0.32, 0.38, 0.38)
+			bg_art.modulate = Color(1.0, 1.0, 1.0, 0.22)
 			bg_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			card_btn.add_child(bg_art)
 
-		var main_hbox = HBoxContainer.new()
-		main_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		main_hbox.offset_left = 10
-		main_hbox.offset_right = -10
-		main_hbox.offset_top = 8
-		main_hbox.offset_bottom = -8
-		main_hbox.add_theme_constant_override("separation", 12)
-		main_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card_btn.add_child(main_hbox)
+		var content_box = HBoxContainer.new()
+		content_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content_box.add_theme_constant_override("separation", 14)
+		card_btn.add_child(content_box)
 
-		# Left: Actual rendered Main Dragon Card (CardUI) at 0.78 scale (156x217)
-		var card_holder := Control.new()
-		card_holder.name = "MainDragonCardHolder"
-		card_holder.custom_minimum_size = Vector2(156, 218)
-		card_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var card_holder = Control.new()
+		card_holder.custom_minimum_size = Vector2(150, 220)
 		card_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		main_hbox.add_child(card_holder)
+		content_box.add_child(card_holder)
 
 		if dragon_card != null and card_ui_prefab != null:
-			var dragon_ui: CardUI = card_ui_prefab.instantiate()
-			dragon_ui.name = "MainDragonCardUI"
-			dragon_ui.base_scale = Vector2(0.78, 0.78)
-			dragon_ui.hover_zoom = false
-			dragon_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			card_holder.add_child(dragon_ui)
-			dragon_ui.setup(dragon_card, false)
-			dragon_ui.scale = Vector2(0.78, 0.78)
-			dragon_ui.position = Vector2(0, 1)
-			for ch in dragon_ui.get_children():
+			var card_node = card_ui_prefab.instantiate()
+			card_node.name = "MainDragonCardUI"
+			card_node.base_scale = Vector2(0.78, 0.78)
+			card_node.hover_zoom = false
+			card_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card_holder.add_child(card_node)
+			card_node.setup(dragon_card, false)
+			card_node.scale = Vector2(0.78, 0.78)
+			card_node.position = Vector2(0, 1)
+			for ch in card_node.get_children():
 				if ch is Control:
 					ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-		# Right: Deck Crest, Title, Flagship Dragon Name & Stats, and Enter Arena CTA
 		var right_v = VBoxContainer.new()
 		right_v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		right_v.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		right_v.alignment = BoxContainer.ALIGNMENT_CENTER
-		right_v.add_theme_constant_override("separation", 6)
 		right_v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		main_hbox.add_child(right_v)
+		content_box.add_child(right_v)
 
-		var h_head = HBoxContainer.new()
-		h_head.add_theme_constant_override("separation", 6)
-		h_head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var ic_path = "res://assets/icons/" + el + ".png"
-		if ResourceLoader.exists(ic_path):
-			var tex = TextureRect.new()
-			tex.texture = load(ic_path)
-			tex.custom_minimum_size = Vector2(26, 26)
-			tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			h_head.add_child(tex)
-		var d_title = Label.new()
-		d_title.text = str(d.get("name", "Starter Deck")).replace(" (" + el.capitalize() + " Starter)", "")
-		d_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		d_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		d_title.add_theme_font_size_override("font_size", 14)
-		d_title.add_theme_color_override("font_color", col.lightened(0.30))
-		d_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		h_head.add_child(d_title)
-		right_v.add_child(h_head)
+		var dname = Label.new()
+		dname.text = str(d.get("name", "Starter Deck"))
+		dname.add_theme_font_size_override("font_size", 16)
+		dname.add_theme_color_override("font_color", col.lightened(0.3))
+		dname.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		right_v.add_child(dname)
 
-		var dragon_badge = Label.new()
-		if dragon_card != null:
-			dragon_badge.text = "🐉 Flagship: " + dragon_card.name + "\n⚔ " + str(dragon_card.attack) + " ATK   •   ♥ " + str(dragon_card.hp) + " HP"
-		else:
-			dragon_badge.text = "🐉 " + el.capitalize() + " Dragon"
-		dragon_badge.add_theme_font_size_override("font_size", 12)
-		dragon_badge.add_theme_color_override("font_color", Color(0.96, 0.94, 0.86))
-		dragon_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		right_v.add_child(dragon_badge)
+		var ddesc = Label.new()
+		ddesc.text = str(d.get("description", ""))
+		ddesc.add_theme_font_size_override("font_size", 11)
+		ddesc.add_theme_color_override("font_color", Color(0.85, 0.88, 0.95))
+		ddesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		ddesc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		right_v.add_child(ddesc)
 
-		var ability_preview = Label.new()
-		if dragon_card != null and not dragon_card.ability.is_empty():
-			ability_preview.text = "✦ " + str(dragon_card.ability.get("name", "")) + ": " + str(dragon_card.ability.get("description", ""))
-		else:
-			ability_preview.text = str(d.get("description", ""))
-		ability_preview.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		ability_preview.add_theme_font_size_override("font_size", 10)
-		ability_preview.add_theme_color_override("font_color", Color(0.80, 0.84, 0.92))
-		ability_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		ability_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		right_v.add_child(ability_preview)
+		var dplaystyle = Label.new()
+		dplaystyle.text = "✦ Playstyle: " + str(d.get("playstyle", "Tactical"))
+		dplaystyle.add_theme_font_size_override("font_size", 11)
+		dplaystyle.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
+		dplaystyle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		right_v.add_child(dplaystyle)
 
 		var cta_panel = PanelContainer.new()
 		cta_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var cta_sb = StyleBoxFlat.new()
-		cta_sb.bg_color = Color(col.r * 0.28, col.g * 0.28, col.b * 0.28, 0.92)
-		cta_sb.border_color = col.lightened(0.25)
+		cta_sb.bg_color = Color(col.r * 0.45, col.g * 0.45, col.b * 0.45, 0.85)
+		cta_sb.border_color = col
 		cta_sb.set_border_width_all(1)
 		cta_sb.set_corner_radius_all(6)
+		cta_sb.content_margin_left = 8
+		cta_sb.content_margin_right = 8
 		cta_sb.content_margin_top = 4
 		cta_sb.content_margin_bottom = 4
 		cta_panel.add_theme_stylebox_override("panel", cta_sb)
@@ -310,7 +377,8 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 
 		var deck_idx = i
 		card_btn.pressed.connect(func():
-			if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+			if has_node("/root/SoundManager"):
+				get_node("/root/SoundManager").play_ui_click()
 			var battle_scene = load("res://scenes/battle.tscn").instantiate()
 			battle_scene.is_vs_ai = vs_ai
 			battle_scene.set("selected_starter_deck_index", deck_idx)
@@ -324,72 +392,8 @@ func _show_starter_deck_selector(vs_ai: bool) -> void:
 	cancel_btn.custom_minimum_size = Vector2(160, 34)
 	cancel_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	cancel_btn.pressed.connect(func():
-		if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+		if has_node("/root/SoundManager"):
+			get_node("/root/SoundManager").play_ui_click()
 		modal.queue_free()
 	)
 	vbox.add_child(cancel_btn)
-
-
-func _on_pack_opening_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-	get_tree().change_scene_to_file("res://scenes/pack_opening.tscn")
-
-func _on_deck_builder_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-	get_tree().change_scene_to_file("res://scenes/deck_builder.tscn")
-
-func _on_collection_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-	get_tree().change_scene_to_file("res://scenes/card_collection.tscn")
-
-func _on_test_suite_pressed() -> void:
-	if has_node("/root/SoundManager"):
-		var sm = get_node("/root/SoundManager")
-		sm.play_ui_click()
-		if sm.has_method("show_audio_settings_modal"):
-			sm.show_audio_settings_modal(self)
-
-func _show_verification_toast(msg: String) -> void:
-	if is_instance_valid(_toast_panel):
-		_toast_panel.queue_free()
-	_toast_panel = PanelContainer.new()
-	var sb = StyleBoxFlat.new()
-	sb.bg_color = Color(0.08, 0.12, 0.22, 0.96)
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.border_color = Color(0.95, 0.78, 0.25, 1.0)
-	sb.corner_radius_top_left = 8
-	sb.corner_radius_top_right = 8
-	sb.corner_radius_bottom_left = 8
-	sb.corner_radius_bottom_right = 8
-	sb.content_margin_left = 18
-	sb.content_margin_right = 18
-	sb.content_margin_top = 10
-	sb.content_margin_bottom = 10
-	sb.shadow_color = Color(0, 0, 0, 0.7)
-	sb.shadow_size = 10
-	_toast_panel.add_theme_stylebox_override("panel", sb)
-
-	var lbl = Label.new()
-	lbl.text = msg
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.78, 1.0))
-	lbl.add_theme_font_size_override("font_size", 13)
-	_toast_panel.add_child(lbl)
-
-	add_child(_toast_panel)
-	_toast_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_toast_panel.position = Vector2(240, 22)
-	_toast_panel.modulate.a = 0.0
-
-	var tw = create_tween()
-	tw.tween_property(_toast_panel, "modulate:a", 1.0, 0.2)
-	tw.tween_interval(3.2)
-	tw.tween_property(_toast_panel, "modulate:a", 0.0, 0.4)
-	tw.tween_callback(_toast_panel.queue_free)
-
-func _on_quit_pressed() -> void:
-	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-	get_tree().quit()
