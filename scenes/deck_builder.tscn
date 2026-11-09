@@ -60,6 +60,16 @@ text = "❖ DECK: 40 CARDS"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="NewDeckBtn" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(80, 34)
+layout_mode = 2
+text = "+ New"
+
+[node name="DeleteDeckBtn" type="Button" parent="TopBar"]
+custom_minimum_size = Vector2(80, 34)
+layout_mode = 2
+text = "🗑 Delete"
+
 [node name="SaveButton" type="Button" parent="TopBar"]
 custom_minimum_size = Vector2(120, 34)
 layout_mode = 2
@@ -185,6 +195,11 @@ tooltip_text = "Shadow"
 custom_minimum_size = Vector2(30, 28)
 layout_mode = 2
 tooltip_text = "Mechanical"
+
+[node name="ElemWaterBtn" type="Button" parent="FilterBar"]
+custom_minimum_size = Vector2(30, 28)
+layout_mode = 2
+tooltip_text = "Water"
 
 [node name="TypeOption" type="OptionButton" parent="FilterBar"]
 custom_minimum_size = Vector2(76, 28)

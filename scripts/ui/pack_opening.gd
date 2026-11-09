@@ -36,9 +36,13 @@ var slot_flipping: Array[bool] = []
 # Node references
 @onready var back_button: Button = $TopBarPanel/TopBar/BackButton
 @onready var collection_button: Button = $TopBarPanel/TopBar/CollectionButton
+@onready var set_toggle_button: Button = get_node_or_null("TopBarPanel/TopBar/SetToggleBtn")
+@onready var top_title_label: Label = $TopBarPanel/TopBar/Title
 @onready var packs_opened_label: Label = $TopBarPanel/TopBar/PacksOpenedLabel
 @onready var instruction_banner: Label = $InstructionBanner
 @onready var sub_status_label: Label = $SubStatusLabel
+
+var current_set: String = "set_1" # "set_1" or "set_2"
 
 @onready var pack_stage: Control = $PackStage
 @onready var pack_shadow: ColorRect = $PackStage/PackShadow
@@ -70,11 +74,30 @@ func _ready() -> void:
 
 	back_button.pressed.connect(_on_back_pressed)
 	collection_button.pressed.connect(_on_collection_pressed)
+	if set_toggle_button:
+		set_toggle_button.pressed.connect(_on_set_toggle_pressed)
 	spin_button.pressed.connect(_on_spin_180_pressed)
 	open_pack_button.pressed.connect(_on_open_pack_pressed)
 	reveal_all_button.pressed.connect(_on_reveal_all_pressed)
 	open_another_button.pressed.connect(_on_open_another_pressed)
 	bottom_menu_button.pressed.connect(_on_back_pressed)
+
+	_update_set_display()
+
+func _on_set_toggle_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	current_set = "set_2" if current_set == "set_1" else "set_1"
+	_update_set_display()
+	_reset_to_new_pack()
+
+func _update_set_display() -> void:
+	if set_toggle_button:
+		set_toggle_button.text = "❖ Set 1: Primal ▾" if current_set == "set_1" else "🌊 Set 2: Tides ▾"
+	if top_title_label:
+		top_title_label.text = "🎁 BOOSTER PACK ALTAR — SET 1: PRIMAL AWAKENING" if current_set == "set_1" else "🌊 BOOSTER PACK ALTAR — SET 2: TIDES & ANCIENT RELICS"
+	if pack_aura:
+		pack_aura.color = Color(0.95, 0.75, 0.2, 0.28) if current_set == "set_1" else Color(0.15, 0.65, 0.95, 0.32)
 
 	pack_sprite.mouse_entered.connect(func(): hover_over_pack = true)
 	pack_sprite.mouse_exited.connect(func():
@@ -338,20 +361,42 @@ func _spawn_procedural_tear_burst() -> void:
 func _draw_booster_pack_cards() -> Array[CardData]:
 	var all_cards = card_db.values()
 
-	var slot_1_2_pool: Array[CardData] = [] # Element Stones or Base/Support cards
-	var slot_3_pool: Array[CardData] = []   # Elemental Spell or Support card
-	var slot_4_pool: Array[CardData] = []   # Elemental Dragon (evolution_stage == 1)
+	var slot_1_2_pool: Array[CardData] = [] # Element Stones or Base/Support/Relic cards
+	var slot_3_pool: Array[CardData] = []   # Elemental Spell, Support, or Rift card
+	var slot_4_pool: Array[CardData] = []   # Elemental Dragon or Beast (stage 1)
 	var slot_5_pool: Array[CardData] = []   # Rare/Apex: Fusion, Transcendent, Ascended, or god_dragon
 
 	for c: CardData in all_cards:
-		if c.card_type == "stone" or c.sub_type == "base_dragon" or c.card_type == "support":
+		var in_set = false
+		if current_set == "set_1":
+			in_set = (c.set_id == "set_1" or c.set_id == "set_1_and_2" or (c.set_id == "" and c.element != "water"))
+		else:
+			in_set = (c.set_id == "set_2" or c.set_id == "set_1_and_2" or c.element == "water" or c.card_type in ["relic", "rift"])
+		if not in_set:
+			continue
+
+		if c.card_type in ["stone", "relic"] or c.sub_type == "base_dragon" or c.card_type == "support":
 			slot_1_2_pool.append(c)
-		if c.card_type == "spell" or c.card_type == "support":
+		if c.card_type in ["spell", "rift", "realm", "support"]:
 			slot_3_pool.append(c)
 		if c.card_type == "beast" and c.evolution_stage == 1:
 			slot_4_pool.append(c)
 		if c.sub_type in ["fusion_dragon", "transcendent_dragon", "ascended_dragon", "god_dragon"] or c.id == "god_dragon" or c.evolution_stage >= 2:
 			slot_5_pool.append(c)
+
+	# Fallbacks if a pool is sparse in this set
+	if slot_1_2_pool.is_empty():
+		for c in all_cards:
+			if c.card_type == "stone": slot_1_2_pool.append(c)
+	if slot_3_pool.is_empty():
+		for c in all_cards:
+			if c.card_type == "spell": slot_3_pool.append(c)
+	if slot_4_pool.is_empty():
+		for c in all_cards:
+			if c.card_type == "beast" and c.evolution_stage == 1: slot_4_pool.append(c)
+	if slot_5_pool.is_empty():
+		for c in all_cards:
+			if c.evolution_stage >= 2: slot_5_pool.append(c)
 
 	var pack: Array[CardData] = []
 
@@ -364,7 +409,7 @@ func _draw_booster_pack_cards() -> Array[CardData]:
 		pack.append(slot_1_2_pool[0])
 		pack.append(slot_1_2_pool[0])
 
-	# Card 3: Elemental Spell or Support card
+	# Card 3: Elemental Spell, Rift, or Support card
 	slot_3_pool.shuffle()
 	if not slot_3_pool.is_empty():
 		pack.append(slot_3_pool[0])

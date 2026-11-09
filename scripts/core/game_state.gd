@@ -13,6 +13,9 @@ signal beast_ascended(player_id: int, beast: BeastInstance)
 signal god_dragon_summoned(player_id: int, beast: BeastInstance)
 signal spell_cast(player_id: int, card: CardData)
 signal realm_changed(player_id: int, realm_card: CardData, replaced_realm: CardData)
+signal relic_attached(player_id: int, relic: CardData, beast: BeastInstance)
+signal rift_set(player_id: int, rift: CardData)
+signal rift_triggered(player_id: int, rift: CardData, message: String)
 signal paralysis_tested(player_id: int, beast: BeastInstance, recovered: bool, coin: String)
 signal combat_resolved(result: Dictionary)
 signal deck_shuffled(player_id: int)
@@ -34,6 +37,7 @@ var player_decks: Array[Array] = [[], []]
 var player_hands: Array[Array] = [[], []]
 var player_discards: Array[Array] = [[], []]
 var player_fields: Array[Array] = [[], []]
+var player_rifts: Array[Array] = [[], []]
 
 var card_db: Dictionary = {}
 
@@ -73,6 +77,7 @@ func start_game(deck0_ids: Array = [], deck1_ids: Array = [], starting_player: i
 		player_hands[p].clear()
 		player_discards[p].clear()
 		player_fields[p].clear()
+		player_rifts[p].clear()
 		player_has_summoned_god_dragon[p] = false
 		
 		# Build deck
@@ -889,9 +894,19 @@ func cast_spell(player_id: int, hand_index: int, target_beast: BeastInstance = n
 	mana_mgr.spend(card.mana_cost)
 	hand.remove_at(hand_index)
 	player_discards[player_id].append(card)
+
+	# Opposing reaction rifts (e.g. Zephyr Barrier)
+	var rift_res = trigger_rifts_on_spell(player_id, card, target_beast)
+	if rift_res.get("negated", false):
+		cleanup_dead_beasts()
+		return {"success": true, "negated": true, "message": rift_res.get("message", "Spell negated by Rift!")}
 	
 	var effect = card.ability.get("effect", "")
 	match effect:
+		"draw_cards":
+			var amt = card.ability.get("amount", 2)
+			for _i in range(amt):
+				draw_card(player_id)
 		"direct_damage":
 			var dmg = card.ability.get("damage", 4)
 			var p_dmg = card.ability.get("player_damage", dmg)
@@ -1086,10 +1101,121 @@ func activate_beast_ability(player_id: int, beast_field_index: int, targets: Arr
 	cleanup_dead_beasts()
 	return res
 
+func play_relic(player_id: int, hand_index: int, target_beast: BeastInstance) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.card_type != "relic":
+		return {"success": false, "error": "Card is not a relic"}
+	if not target_beast or target_beast.is_dead() or not (target_beast in player_fields[player_id]):
+		return {"success": false, "error": "Must attach relic to a friendly active Beast"}
+		
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana to equip relic"}
+		
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	target_beast.attach_relic(card)
+	relic_attached.emit(player_id, card, target_beast)
+	card_played.emit(player_id, card)
+	return {"success": true, "relic": card, "beast": target_beast}
+
+func play_rift(player_id: int, hand_index: int) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"success": false, "error": "Not your turn"}
+	var hand = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return {"success": false, "error": "Invalid hand index"}
+	var card: CardData = hand[hand_index]
+	if card.card_type != "rift":
+		return {"success": false, "error": "Card is not a rift"}
+		
+	var mana_mgr = player_mana[player_id]
+	if not mana_mgr.can_spend(card.mana_cost):
+		return {"success": false, "error": "Insufficient Mana to set rift"}
+		
+	mana_mgr.spend(card.mana_cost)
+	hand.remove_at(hand_index)
+	player_rifts[player_id].append(card)
+	rift_set.emit(player_id, card)
+	card_played.emit(player_id, card)
+	return {"success": true, "rift": card}
+
+func trigger_rifts_on_attack(attacker: BeastInstance, _defender) -> Dictionary:
+	var enemy_id = 1 if attacker.controller_id == 0 else 0
+	var rifts = player_rifts[enemy_id]
+	if rifts.is_empty():
+		return {"triggered": false}
+	
+	var to_trigger: CardData = null
+	for r in rifts:
+		if r.ability and r.ability.get("trigger") == "on_enemy_attack":
+			to_trigger = r
+			break
+			
+	if not to_trigger:
+		return {"triggered": false}
+		
+	rifts.erase(to_trigger)
+	player_discards[enemy_id].append(to_trigger)
+	
+	var effect = to_trigger.ability.get("effect", "")
+	var msg = ""
+	if effect == "damage_attacker":
+		var dmg = int(to_trigger.ability.get("damage", 4))
+		attacker.take_damage(dmg)
+		msg = to_trigger.name + " detonated, dealing " + str(dmg) + " damage to " + attacker.card_data.name + "!"
+	elif effect == "paralyze_attacker":
+		attacker.is_paralyzed = true
+		msg = to_trigger.name + " triggered! " + attacker.card_data.name + " was paralyzed!"
+		
+	rift_triggered.emit(enemy_id, to_trigger, msg)
+	return {"triggered": true, "rift": to_trigger, "message": msg}
+
+func trigger_rifts_on_spell(caster_id: int, spell_card: CardData, _target) -> Dictionary:
+	var enemy_id = 1 if caster_id == 0 else 0
+	var rifts = player_rifts[enemy_id]
+	if rifts.is_empty():
+		return {"triggered": false, "negated": false}
+		
+	var to_trigger: CardData = null
+	for r in rifts:
+		if r.ability and r.ability.get("trigger") == "on_enemy_spell":
+			to_trigger = r
+			break
+			
+	if not to_trigger:
+		return {"triggered": false, "negated": false}
+		
+	rifts.erase(to_trigger)
+	player_discards[enemy_id].append(to_trigger)
+	
+	var effect = to_trigger.ability.get("effect", "")
+	var msg = ""
+	var negated = false
+	if effect == "negate_and_heal":
+		negated = true
+		var heal = int(to_trigger.ability.get("heal_amount", 3))
+		heal_player(enemy_id, heal)
+		msg = to_trigger.name + " activated! " + spell_card.name + " was negated and Player " + str(enemy_id + 1) + " restored " + str(heal) + " HP!"
+		
+	rift_triggered.emit(enemy_id, to_trigger, msg)
+	return {"triggered": true, "negated": negated, "rift": to_trigger, "message": msg}
+
 func attack_beast(attacker: BeastInstance, defender: BeastInstance) -> Dictionary:
 	if is_game_over:
 		return {"success": false, "error": "Game is already over"}
-	var res = CombatEngine.execute_beast_combat(attacker, defender, turn_number)
+	var enemy_id = defender.controller_id
+	var rift_res = trigger_rifts_on_attack(attacker, defender)
+	if attacker.is_dead() or attacker.is_paralyzed or attacker.stun_turns > 0:
+		cleanup_dead_beasts()
+		return {"success": true, "interrupted_by_rift": true, "rift_message": rift_res.get("message", "")}
+
+	var res = CombatEngine.execute_beast_combat(attacker, defender, turn_number, self, get_field(enemy_id))
 	if res.success:
 		cleanup_dead_beasts()
 		combat_resolved.emit(res)
@@ -1099,6 +1225,11 @@ func attack_player_direct(attacker: BeastInstance) -> Dictionary:
 	if is_game_over:
 		return {"success": false, "error": "Game is already over"}
 	var enemy_id = 1 if attacker.controller_id == 0 else 0
+	var rift_res = trigger_rifts_on_attack(attacker, null)
+	if attacker.is_dead() or attacker.is_paralyzed or attacker.stun_turns > 0:
+		cleanup_dead_beasts()
+		return {"success": true, "interrupted_by_rift": true, "rift_message": rift_res.get("message", "")}
+
 	var res = CombatEngine.execute_direct_attack(attacker, enemy_id, self, turn_number)
 	if res.success:
 		combat_resolved.emit(res)
@@ -1125,6 +1256,9 @@ func cleanup_dead_beasts() -> void:
 			# If it had underlying fusion materials, discard them as well
 			for mat in dead_beast.fusion_materials:
 				player_discards[p].append(mat)
+			# If it had attached relics, discard them as well
+			for rel in dead_beast.attached_relics:
+				player_discards[p].append(rel)
 
 func end_game(winner: int, reason: String) -> void:
 	is_game_over = true

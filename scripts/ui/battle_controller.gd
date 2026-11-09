@@ -77,6 +77,14 @@ func _ready() -> void:
 	game_state.combat_resolved.connect(_on_combat_resolved)
 	game_state.deck_shuffled.connect(_on_deck_shuffled)
 	game_state.paralysis_tested.connect(_on_paralysis_tested)
+	game_state.rift_triggered.connect(func(p_id, rift, msg):
+		spawn_floating_combat_text(Vector2(640, 360), "RIFT: " + rift.name + "!", Color(0.9, 0.4, 1.0), true)
+		log_message("[color=#d478ff]✦ RIFT TRIGGERED: " + msg + "[/color]")
+	)
+	game_state.relic_attached.connect(func(p_id, relic, beast):
+		spawn_floating_combat_text(Vector2(640, 480 if p_id == 0 else 240), "EQUIPPED: " + relic.name, Color(0.3, 0.85, 1.0))
+		log_message("[color=#5cd6ff]❖ RELIC ATTACHED: " + relic.name + " equipped to " + beast.card_data.name + "[/color]")
+	)
 	game_state.game_ended.connect(_on_game_ended)
 	
 	if not end_turn_button.pressed.is_connected(_on_end_turn_pressed):
@@ -1544,6 +1552,7 @@ func _on_turn_started(turn: int, player_id: int) -> void:
 		if turn > 1 and sm.has_method("play_voice"):
 			sm.play_voice("vo_your_turn" if player_id == 0 else "vo_enemy_turn")
 	log_message("[color=#7bdff2]◆ Turn " + str(turn) + " — " + ("You" if player_id == 0 else "Opponent") + "[/color]")
+	spawn_floating_combat_text(Vector2(640, 240), "✦ YOUR TURN ✦" if player_id == 0 else "✦ ENEMY TURN ✦", Color(1.0, 0.88, 0.3) if player_id == 0 else Color(0.9, 0.45, 0.45), true)
 	update_hud()
 
 func _on_turn_ended(turn: int, player_id: int) -> void:
@@ -1664,8 +1673,64 @@ func play_card_summon_vfx(player_id: int, beast: BeastInstance, is_major_transfo
 	clean_tw.tween_interval(0.50)
 	clean_tw.tween_callback(vfx_layer.queue_free)
 
+func spawn_floating_combat_text(pos: Vector2, text: String, color: Color = Color(1.0, 0.28, 0.22), is_crit: bool = false) -> void:
+	if not is_inside_tree():
+		return
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.z_index = 90
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lbl.add_theme_font_size_override("font_size", 28 if is_crit else 20)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+	lbl.add_theme_constant_override("shadow_offset_x", 2)
+	lbl.add_theme_constant_override("shadow_offset_y", 2)
+	lbl.add_theme_color_override("font_outline_color", Color(0.04, 0.04, 0.08, 0.95))
+	lbl.add_theme_constant_override("outline_size", 4)
+	lbl.position = pos - Vector2(40, 16)
+	lbl.scale = Vector2(0.5, 0.5)
+	add_child(lbl)
+
+	var tw = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tw.tween_property(lbl, "scale", Vector2(1.25, 1.25) if is_crit else Vector2(1.05, 1.05), 0.15)
+	tw.tween_property(lbl, "scale", Vector2.ONE, 0.1)
+	
+	var move_tw = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	move_tw.tween_property(lbl, "position:y", pos.y - 55.0, 0.85)
+	move_tw.parallel().tween_property(lbl, "modulate:a", 0.0, 0.45).set_delay(0.4)
+	move_tw.tween_callback(lbl.queue_free)
+
 func _on_combat_resolved(res: Dictionary) -> void:
-	pass
+	if not res.get("success", false):
+		return
+
+	# Direct player attack
+	if res.has("damage_dealt"):
+		var dmg = int(res.get("damage_dealt", 0))
+		var is_crit = dmg >= 8
+		var target_pos = Vector2(640, 80) if game_state.active_player_id == 0 else Vector2(640, 640)
+		spawn_floating_combat_text(target_pos, "-%d" % dmg, Color(1.0, 0.22, 0.22), is_crit)
+
+	# Beast combat
+	if res.has("attacker_damage_dealt"):
+		var def_dmg = int(res.get("attacker_damage_dealt", 0))
+		var atk_dmg = int(res.get("counter_damage_dealt", 0))
+		if def_dmg > 0:
+			spawn_floating_combat_text(Vector2(640, 310), "-%d" % def_dmg, Color(1.0, 0.35, 0.2), def_dmg >= 10)
+		if atk_dmg > 0:
+			spawn_floating_combat_text(Vector2(640, 430), "-%d" % atk_dmg, Color(1.0, 0.5, 0.25), atk_dmg >= 10)
+
+	# Lifesteal heal
+	if int(res.get("lifesteal_healed", 0)) > 0:
+		var heal = int(res.get("lifesteal_healed", 0))
+		var heal_pos = Vector2(640, 640) if game_state.active_player_id == 0 else Vector2(640, 80)
+		spawn_floating_combat_text(heal_pos, "+%d LIFESTEAL" % heal, Color(0.2, 0.95, 0.4))
+
+	# Trample damage
+	if int(res.get("trample_damage", 0)) > 0:
+		var trample_dmg = int(res.get("trample_damage", 0))
+		var enemy_pos = Vector2(640, 80) if game_state.active_player_id == 0 else Vector2(640, 640)
+		spawn_floating_combat_text(enemy_pos, "-%d PIERCE!" % trample_dmg, Color(1.0, 0.75, 0.1), true)
 
 func _on_game_ended(winner: int, reason: String) -> void:
 	if has_node("/root/SoundManager"):

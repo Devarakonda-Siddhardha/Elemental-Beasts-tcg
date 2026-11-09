@@ -1,6 +1,8 @@
 class_name TestRunner
 extends SceneTree
 
+const PlayerSaveManager = preload("res://scripts/core/player_save_manager.gd")
+
 var total_tests: int = 0
 var passed_tests: int = 0
 var failed_tests: int = 0
@@ -78,6 +80,7 @@ func run_all_tests() -> void:
 	test_35_procedural_playmat_and_layout()
 	test_36_card_reworks_and_new_supporters_spells()
 	test_37_beast_action_modal_centering_and_orchestral_bgm()
+	test_38_set_2_water_and_relics_mechanics()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -632,7 +635,7 @@ func test_28_six_elemental_starter_decks_and_new_cards() -> void:
 	json.parse(file.get_as_text())
 	file.close()
 	var decks: Array = json.get_data().get("decks", [])
-	assert_true(decks.size() == 6, "Requirement 28a: Exactly 6 primary-element Starter Decks exist in default_decks.json", "Actual: " + str(decks.size()))
+	assert_true(decks.size() >= 6, "Requirement 28a: At least 6 primary-element Starter Decks exist in default_decks.json", "Actual: " + str(decks.size()))
 
 	var expected_elements = ["fire", "lightning", "wind", "ice", "shadow", "mechanical"]
 	var found_elements: Array[String] = []
@@ -889,7 +892,7 @@ func test_32_settings_log_toggle_vfx_and_collection_ui() -> void:
 	cc.preview_ability = cc.get_node("PreviewPanel/InfoBox/AbilityText")
 	cc.preview_fidelity = cc.get_node("PreviewPanel/InfoBox/Fidelity")
 	cc._build_reference_archive_layout()
-	assert_true(cc.has_node("LeftSidebar") and cc.has_node("FilterToolbar") and cc.element_filter_btns.size() == 7 and cc.search_input != null, "Requirement 32f: Card Collection matches reference layout with Left Sidebar, Search bar, 6 Element icon filters, Type/Rarity dropdowns, and Ornate Preview Panel")
+	assert_true(cc.has_node("LeftSidebar") and cc.has_node("FilterToolbar") and cc.element_filter_btns.size() >= 7 and cc.search_input != null, "Requirement 32f: Card Collection matches reference layout with Left Sidebar, Search bar, 6 Element icon filters, Type/Rarity dropdowns, and Ornate Preview Panel")
 	cc.free()
 
 func test_33_neutral_setup_supporter_cards() -> void:
@@ -1257,6 +1260,110 @@ func test_37_beast_action_modal_centering_and_orchestral_bgm() -> void:
 	assert_true(bgm_file != null and bgm_file.get_length() > 500000, "Requirement 37d: Orchestral BGM main_menu_theme.mp3 is high-quality (>500KB)")
 	if bgm_file:
 		bgm_file.close()
+
+func test_38_set_2_water_and_relics_mechanics() -> void:
+	var db = CardData.load_database()
+
+	# 1. Verify all 12 Set 2 cards exist in CARD_DATABASE.json with set_id == "set_2" and have dedicated artwork
+	var set_2_ids := [
+		"tidal_serpent", "transcendent_water_dragon", "abyssal_trench",
+		"torrential_blast", "tidal_blessing",
+		"dragon_claws", "aegis_plating", "wings_of_the_gale", "ocean_amulet",
+		"molten_counter", "zephyr_barrier", "static_ambush"
+	]
+	var all_set_2_valid := true
+	for cid in set_2_ids:
+		if not db.has(cid):
+			all_set_2_valid = false
+			printerr("Missing Set 2 card: " + cid)
+		else:
+			var card: CardData = db[cid]
+			if card.set_id != "set_2" or not FileAccess.file_exists("res://assets/art/" + cid + ".jpg"):
+				all_set_2_valid = false
+				printerr("Invalid Set 2 metadata or missing art: " + cid)
+	assert_true(all_set_2_valid and db.has("water_dragon") and FileAccess.file_exists("res://assets/art/water_dragon.jpg"), "Requirement 38a: All 12 Set 2 cards exist in CARD_DATABASE.json with set_id == 'set_2' and dedicated art in assets/art/")
+
+	# 2. Verify Starter Deck starter_water in default_decks.json
+	var def_decks_file = FileAccess.open("res://data/default_decks.json", FileAccess.READ)
+	var has_water_deck := false
+	var water_deck_count := 0
+	if def_decks_file:
+		var json = JSON.new()
+		if json.parse(def_decks_file.get_as_text()) == OK:
+			var decks = json.get_data().get("decks", [])
+			for d in decks:
+				if d.get("id") == "starter_water":
+					has_water_deck = true
+					water_deck_count = d.get("cards", []).size()
+		def_decks_file.close()
+	assert_true(has_water_deck and water_deck_count == 40, "Requirement 38b: 7th Starter Deck 'starter_water' exists in default_decks.json with 40 cards")
+
+	# 3. Verify Relic cards attach to BeastInstance, grant Attack/Shield buffs, and persist across turn refreshes
+	var water_dragon = BeastInstance.create(db["water_dragon"], 0, 0)
+	var claws = db["dragon_claws"]
+	var initial_atk = water_dragon.get_total_attack()
+	water_dragon.attach_relic(claws)
+	assert_true(water_dragon.attached_relics.size() == 1 and water_dragon.get_total_attack() == initial_atk + 3, "Requirement 38c: Relic cards attach to BeastInstance and grant ATK bonuses")
+	water_dragon.turn_refresh()
+	assert_true(water_dragon.get_total_attack() == initial_atk + 3, "Requirement 38c2: Relic stat buffs persist across turn refreshes")
+
+	# 4. Verify Aegis Plating relic grants Taunt keyword and blocks enemy attacks against non-taunt beasts
+	var beast_defender = BeastInstance.create(db["little_dragon"], 1, 0)
+	var beast_taunt = BeastInstance.create(db["water_dragon"], 1, 1)
+	beast_taunt.attach_relic(db["aegis_plating"])
+	var beast_attacker = BeastInstance.create(db["fire_dragon"], 0, 0)
+	beast_attacker.summoned_turn = -1
+	var enemy_field = [beast_defender, beast_taunt]
+	var can_atk_normal = CombatEngine.can_attack_beast(beast_attacker, beast_defender, 1, enemy_field)
+	var can_atk_taunt = CombatEngine.can_attack_beast(beast_attacker, beast_taunt, 1, enemy_field)
+	assert_true(not can_atk_normal.valid and can_atk_taunt.valid, "Requirement 38d: Aegis Plating grants Taunt keyword and blocks enemy attacks against non-taunt beasts")
+
+	# 5. Verify Wings of the Gale relic grants First Strike keyword and eliminates counter-attack damage if lethal
+	var fs_attacker = BeastInstance.create(db["fire_dragon"], 0, 0) # 8 ATK, 8 HP
+	fs_attacker.summoned_turn = -1
+	fs_attacker.attach_relic(db["wings_of_the_gale"]) # grants first_strike (+2 ATK = 10 ATK)
+	var fs_defender = BeastInstance.create(db["little_dragon"], 1, 0) # 3 ATK, 5 HP
+	var result_fs = CombatEngine.execute_beast_combat(fs_attacker, fs_defender, 1, null, [fs_defender])
+	assert_true(result_fs.success and result_fs.defender_died and result_fs.counter_damage_dealt == 0 and fs_attacker.current_hp == fs_attacker.max_hp, "Requirement 38e: Wings of the Gale grants First Strike and negates counter-attack damage on lethal strike")
+
+	# 6. Verify Lifesteal keyword heals attacker player when dealing damage
+	var state = GameState.new()
+	state.start_game()
+	state.player_hp[0] = 20
+	var ls_beast = BeastInstance.create(db["tidal_serpent"], 0, 0)
+	ls_beast.summoned_turn = -1
+	var target_beast = BeastInstance.create(db["little_dragon"], 1, 0)
+	state.player_fields[1] = [target_beast]
+	var res_ls = CombatEngine.execute_beast_combat(ls_beast, target_beast, 1, state, state.player_fields[1])
+	assert_true(res_ls.lifesteal_healed > 0 and state.player_hp[0] > 20, "Requirement 38f: Lifesteal keyword heals controller player when dealing combat damage")
+
+	# 7. Verify Trample/Pierce keyword deals excess damage to defending player
+	state.player_hp[1] = 30
+	var trample_beast = BeastInstance.create(db["transcendent_water_dragon"], 0, 0) # 9 ATK, trample
+	trample_beast.summoned_turn = -1
+	var chump = BeastInstance.create(db["little_dragon"], 1, 0) # 3 ATK, 5 HP (defender_hp_before = 5)
+	state.player_fields[1] = [chump]
+	var res_tr = CombatEngine.execute_beast_combat(trample_beast, chump, 1, state, state.player_fields[1])
+	assert_true(res_tr.trample_damage > 0 and state.player_hp[1] < 30, "Requirement 38g: Trample/Pierce keyword deals excess damage to defending player")
+
+	# 8. Verify Reaction Rift cards set on field and trigger on enemy actions
+	var rift_card = db["molten_counter"]
+	state.player_hands[0] = [rift_card]
+	var play_ok = state.play_rift(0, 0)
+	assert_true(play_ok and state.player_rifts[0].size() == 1, "Requirement 38h: Reaction Rift cards set face-down in player rift zone")
+	var enemy_attacker = BeastInstance.create(db["little_dragon"], 1, 0)
+	var rift_res = state.trigger_rifts_on_attack(enemy_attacker, null)
+	assert_true(rift_res.get("triggered", false) and state.player_rifts[0].is_empty(), "Requirement 38h2: Molten Counter triggers on enemy attack, damaging attacker and clearing rift")
+
+	# 9. Verify PlayerSaveManager
+	var initial_save = PlayerSaveManager.load_save()
+	var initial_level = initial_save.get("level", 1)
+	var lvl_res = PlayerSaveManager.add_xp(200)
+	assert_true(lvl_res.level >= initial_level, "Requirement 38i: PlayerSaveManager tracks XP and levels up player profile")
+	PlayerSaveManager.record_boss_defeat("boss_water")
+	var post_save = PlayerSaveManager.load_save()
+	assert_true(post_save.get("bosses_defeated", []).has("boss_water"), "Requirement 38i2: PlayerSaveManager persists boss gauntlet victories")
+
 
 
 

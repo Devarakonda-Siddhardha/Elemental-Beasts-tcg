@@ -35,7 +35,10 @@ var search_query: String = ""
 @onready var elem_wind_btn: Button = $FilterBar/ElemWindBtn
 @onready var elem_ice_btn: Button = $FilterBar/ElemIceBtn
 @onready var elem_shadow_btn: Button = $FilterBar/ElemShadowBtn
+@onready var new_deck_button: Button = get_node_or_null("TopBar/NewDeckBtn")
+@onready var delete_deck_button: Button = get_node_or_null("TopBar/DeleteDeckBtn")
 @onready var elem_mech_btn: Button = $FilterBar/ElemMechBtn
+@onready var elem_water_btn: Button = get_node_or_null("FilterBar/ElemWaterBtn")
 @onready var type_option: OptionButton = $FilterBar/TypeOption
 @onready var rarity_option: OptionButton = $FilterBar/RarityOption
 @onready var cost_option: OptionButton = $FilterBar/CostOption
@@ -53,6 +56,10 @@ func _ready() -> void:
 	back_button.pressed.connect(_on_back_pressed)
 	save_button.pressed.connect(_on_save_pressed)
 	deck_option.item_selected.connect(_on_deck_selected)
+	if new_deck_button:
+		new_deck_button.pressed.connect(_on_new_deck_pressed)
+	if delete_deck_button:
+		delete_deck_button.pressed.connect(_on_delete_deck_pressed)
 	
 	if deck_left_btn:
 		deck_left_btn.pressed.connect(func(): _scroll_deck(-340))
@@ -83,7 +90,7 @@ func _apply_ornate_theme() -> void:
 	var save_normal = _make_stylebox(Color(0.32, 0.20, 0.06, 0.96), Color(0.95, 0.76, 0.30, 1.0), 2, 6)
 	var save_hover = _make_stylebox(Color(0.45, 0.28, 0.08, 0.98), Color(1.0, 0.90, 0.45, 1.0), 2, 6)
 	
-	for btn in [back_button, deck_option]:
+	for btn in [back_button, deck_option, new_deck_button, delete_deck_button]:
 		if btn:
 			btn.add_theme_stylebox_override("normal", gold_normal)
 			btn.add_theme_stylebox_override("hover", gold_hover)
@@ -114,7 +121,8 @@ func _setup_filter_controls() -> void:
 		"wind": [elem_wind_btn, "res://assets/icons/wind.png"],
 		"ice": [elem_ice_btn, "res://assets/icons/ice.png"],
 		"shadow": [elem_shadow_btn, "res://assets/icons/shadow.png"],
-		"mechanical": [elem_mech_btn, "res://assets/icons/mechanical.png"]
+		"mechanical": [elem_mech_btn, "res://assets/icons/mechanical.png"],
+		"water": [elem_water_btn, "res://assets/icons/water.png"]
 	}
 	for elem_key in elem_buttons.keys():
 		var btn: Button = elem_buttons[elem_key][0]
@@ -148,8 +156,10 @@ func _setup_filter_controls() -> void:
 		type_option.add_item("Spells")
 		type_option.add_item("Supports")
 		type_option.add_item("Stones")
+		type_option.add_item("Relics")
+		type_option.add_item("Rifts")
 		type_option.item_selected.connect(func(idx: int):
-			var map = ["all", "beast", "fusion", "spell", "support", "stone"]
+			var map = ["all", "beast", "fusion", "spell", "support", "stone", "relic", "rift"]
 			selected_type = map[idx] if idx < map.size() else "all"
 			populate_catalog()
 		)
@@ -190,7 +200,8 @@ func _refresh_element_filter_styles() -> void:
 		"wind": elem_wind_btn,
 		"ice": elem_ice_btn,
 		"shadow": elem_shadow_btn,
-		"mechanical": elem_mech_btn
+		"mechanical": elem_mech_btn,
+		"water": elem_water_btn
 	}
 	for k in map.keys():
 		var btn: Button = map[k]
@@ -246,12 +257,70 @@ func load_decks_file() -> void:
 		var json = JSON.new()
 		if json.parse(text) == OK:
 			decks_data = json.get_data()
+	if not decks_data.has("decks"):
+		decks_data["decks"] = []
+
+	var user_path = "user://custom_decks.json"
+	if FileAccess.file_exists(user_path):
+		var u_file = FileAccess.open(user_path, FileAccess.READ)
+		var u_text = u_file.get_as_text()
+		u_file.close()
+		var u_json = JSON.new()
+		if u_json.parse(u_text) == OK:
+			var custom_list = u_json.get_data().get("decks", [])
+			for d in custom_list:
+				decks_data["decks"].append(d)
+
+func save_custom_decks_file() -> void:
+	var custom_list: Array = []
+	for d in decks_data.get("decks", []):
+		if d.get("is_custom", false) == true:
+			custom_list.append(d)
+	var f = FileAccess.open("user://custom_decks.json", FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify({"decks": custom_list}, "\t"))
+		f.close()
+
+func _on_new_deck_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	var custom_idx = 1
+	for d in decks_data.get("decks", []):
+		if str(d.get("name", "")).begins_with("Custom Deck"):
+			custom_idx += 1
+	var new_deck = {
+		"name": "Custom Deck " + str(custom_idx),
+		"element": "neutral",
+		"is_custom": true,
+		"cards": current_deck_cards.duplicate()
+	}
+	decks_data["decks"].append(new_deck)
+	save_custom_decks_file()
+	setup_deck_options()
+	deck_option.select(decks_data["decks"].size() - 1)
+	load_selected_deck(decks_data["decks"].size() - 1)
+	deck_count_label.text = "✦ CREATED " + new_deck["name"] + " ✦"
+
+func _on_delete_deck_pressed() -> void:
+	if has_node("/root/SoundManager"):
+		get_node("/root/SoundManager").play_ui_click()
+	var idx = deck_option.selected
+	if idx >= 0 and idx < decks_data.get("decks", []).size():
+		if decks_data["decks"].size() > 1:
+			decks_data["decks"].remove_at(idx)
+			save_custom_decks_file()
+			setup_deck_options()
+			var next_idx = mini(idx, decks_data["decks"].size() - 1)
+			deck_option.select(next_idx)
+			load_selected_deck(next_idx)
+			deck_count_label.text = "DECK DELETED"
 
 func setup_deck_options() -> void:
 	deck_option.clear()
 	if decks_data.has("decks"):
 		for d in decks_data["decks"]:
-			deck_option.add_item("✦  " + str(d.get("name", "Custom Deck")))
+			var prefix = "✎ " if d.get("is_custom", false) else "✦ "
+			deck_option.add_item(prefix + str(d.get("name", "Custom Deck")))
 
 func _on_deck_selected(idx: int) -> void:
 	load_selected_deck(idx)
@@ -296,10 +365,8 @@ func refresh_deck_view() -> void:
 			deck_container.add_child(slot)
 
 func _matches_catalog_filters(card: CardData) -> bool:
-	if card.element == "water":
-		return false
 	if selected_element != "all":
-		if card.element != selected_element and not card.fusion_elements.has(selected_element):
+		if card.element != selected_element and not card.element.contains(selected_element):
 			return false
 	if selected_type != "all":
 		match selected_type:
@@ -320,6 +387,12 @@ func _matches_catalog_filters(card: CardData) -> bool:
 					return false
 			"stone":
 				if card.card_type != "stone":
+					return false
+			"relic":
+				if card.card_type != "relic":
+					return false
+			"rift":
+				if card.card_type != "rift":
 					return false
 	if selected_rarity != "all":
 		match selected_rarity:
@@ -400,6 +473,11 @@ func remove_card_from_deck(idx: int) -> void:
 
 func _on_save_pressed() -> void:
 	if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+	var idx = deck_option.selected
+	if idx >= 0 and idx < decks_data.get("decks", []).size():
+		decks_data["decks"][idx]["cards"] = current_deck_cards.duplicate()
+		decks_data["decks"][idx]["is_custom"] = true
+		save_custom_decks_file()
 	var val = RulesConfig.validate_deck(current_deck_cards)
 	if val.valid:
 		deck_count_label.text = "SAVED! (40/40 VALID)"

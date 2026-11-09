@@ -115,6 +115,11 @@ text = "🎁 BOOSTER PACK ALTAR — SET 1: PRIMAL AWAKENING"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="SetToggleBtn" type="Button" parent="TopBarPanel/TopBar"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+text = "❖ Set 1: Primal ▾"
+
 [node name="PacksOpenedLabel" type="Label" parent="TopBarPanel/TopBar"]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2

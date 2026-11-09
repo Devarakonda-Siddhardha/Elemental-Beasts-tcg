@@ -26,6 +26,9 @@ var is_paralyzed: bool = false
 # Materials (for Fusion Dragons, holds the underlying base dragons)
 var fusion_materials: Array[CardData] = []
 
+# Relics / Equipment cards attached to this beast
+var attached_relics: Array[CardData] = []
+
 static var _next_id: int = 1
 
 static func create(p_card_data: CardData, p_controller: int, p_turn: int) -> BeastInstance:
@@ -43,6 +46,9 @@ static func create(p_card_data: CardData, p_controller: int, p_turn: int) -> Bea
 
 func get_attack() -> int:
 	return maxi(0, base_attack + bonus_attack)
+
+func get_total_attack() -> int:
+	return get_attack()
 
 func is_immune_to_spells() -> bool:
 	if not card_data:
@@ -90,12 +96,59 @@ func is_dead() -> bool:
 func turn_refresh() -> void:
 	attacks_performed = 0
 	ability_used_this_turn = false
-	bonus_attack = 0
+	bonus_attack = get_relic_attack_bonus()
 	max_attacks_per_turn = 1
 	if stun_turns > 0:
 		stun_turns -= 1
 	if freeze_turns > 0:
 		freeze_turns -= 1
+
+func attach_relic(relic: CardData) -> void:
+	if not relic:
+		return
+	attached_relics.append(relic)
+	if relic.ability:
+		var atk_b = int(relic.ability.get("atk_bonus", 0))
+		bonus_attack += atk_b
+		var sh_b = int(relic.ability.get("shield_hp", 0))
+		shield_hp += sh_b
+		var hp_b = int(relic.ability.get("hp_bonus", 0))
+		if hp_b > 0:
+			max_hp += hp_b
+			current_hp += hp_b
+
+func get_relic_attack_bonus() -> int:
+	var total := 0
+	for r in attached_relics:
+		if r.ability:
+			total += int(r.ability.get("atk_bonus", 0))
+	return total
+
+func has_keyword(kw: String) -> bool:
+	var check_kw = kw.to_lower()
+	if card_data:
+		for k in card_data.keywords:
+			if k.to_lower() == check_kw:
+				return true
+		if card_data.ability:
+			if str(card_data.ability.get("keyword", "")).to_lower() == check_kw:
+				return true
+			if str(card_data.ability.get("effect", "")).to_lower() == check_kw:
+				return true
+			if card_data.ability.get(check_kw, false) == true:
+				return true
+	for relic in attached_relics:
+		for k in relic.keywords:
+			if k.to_lower() == check_kw:
+				return true
+		if relic.ability:
+			if str(relic.ability.get("keyword", "")).to_lower() == check_kw:
+				return true
+			if str(relic.ability.get("effect", "")).to_lower() == check_kw:
+				return true
+			if relic.ability.get(check_kw, false) == true:
+				return true
+	return false
 
 func apply_status(status_name: String, turns: int) -> void:
 	if status_name == "freeze":

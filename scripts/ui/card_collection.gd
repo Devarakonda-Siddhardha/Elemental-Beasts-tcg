@@ -205,7 +205,7 @@ func _build_reference_archive_layout() -> void:
 		)
 		f_bar.add_child(all_el_btn)
 
-		for el in ["fire", "lightning", "wind", "ice", "shadow", "mechanical"]:
+		for el in ["fire", "lightning", "wind", "ice", "shadow", "mechanical", "water"]:
 			var el_str: String = str(el)
 			var e_btn := Button.new()
 			e_btn.custom_minimum_size = Vector2(30, 30)
@@ -237,13 +237,30 @@ func _build_reference_archive_layout() -> void:
 		type_dropdown.add_item("Spells")
 		type_dropdown.add_item("Support")
 		type_dropdown.add_item("Stones")
+		type_dropdown.add_item("Relics")
+		type_dropdown.add_item("Rifts")
 		type_dropdown.item_selected.connect(func(idx: int):
 			if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
-			var map_t := ["all", "beast", "fusion", "realm", "spell", "support", "stone"]
+			var map_t := ["all", "beast", "fusion", "realm", "spell", "support", "stone", "relic", "rift"]
 			current_type_filter = map_t[clampi(idx, 0, map_t.size() - 1)]
 			populate_cards()
 		)
 		f_bar.add_child(type_dropdown)
+
+		set_dropdown = OptionButton.new()
+		set_dropdown.custom_minimum_size = Vector2(78, 30)
+		set_dropdown.add_theme_font_size_override("font_size", 11)
+		set_dropdown.add_item("Set ▾")
+		set_dropdown.add_item("All Sets")
+		set_dropdown.add_item("Set 1: Primal")
+		set_dropdown.add_item("Set 2: Tides")
+		set_dropdown.item_selected.connect(func(idx: int):
+			if has_node("/root/SoundManager"): get_node("/root/SoundManager").play_ui_click()
+			var map_s := ["all", "all", "set_1", "set_2"]
+			current_set_filter = map_s[clampi(idx, 0, map_s.size() - 1)]
+			populate_cards()
+		)
+		f_bar.add_child(set_dropdown)
 
 		rarity_dropdown = OptionButton.new()
 		rarity_dropdown.custom_minimum_size = Vector2(82, 30)
@@ -386,7 +403,8 @@ func populate_cards() -> void:
 		grid_container.add_child(slot)
 
 	if count_title_label:
-		count_title_label.text = "All Cards (" + str(shown_count) + ")"
+		var pct = int(float(shown_count) / float(maxi(1, card_db.size())) * 100.0)
+		count_title_label.text = "✦ CODEX: " + str(shown_count) + " / " + str(card_db.size()) + " CARDS (" + str(pct) + "%) ✦"
 
 	if first_card:
 		show_card_preview(first_card)
@@ -399,7 +417,15 @@ func matches_filter(card: CardData) -> bool:
 		if not hay.contains(search_query):
 			return false
 
-	if current_element_filter != "all" and card.element.to_lower() != current_element_filter:
+	if current_set_filter != "all":
+		if current_set_filter == "set_1":
+			if card.set_id != "set_1" and card.set_id != "set_1_and_2":
+				return false
+		elif current_set_filter == "set_2":
+			if card.set_id != "set_2" and card.set_id != "set_1_and_2" and card.element != "water" and not (card.card_type in ["relic", "rift"]):
+				return false
+
+	if current_element_filter != "all" and card.element.to_lower() != current_element_filter and not card.element.contains(current_element_filter):
 		return false
 
 	if current_type_filter != "all":
@@ -416,6 +442,10 @@ func matches_filter(card: CardData) -> bool:
 				if card.card_type != "support": return false
 			"stone":
 				if card.card_type != "stone": return false
+			"relic":
+				if card.card_type != "relic": return false
+			"rift":
+				if card.card_type != "rift": return false
 
 	if current_rarity_filter != "all":
 		match current_rarity_filter:

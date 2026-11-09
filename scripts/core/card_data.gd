@@ -16,6 +16,8 @@ var evolution_stage: int = 0 # 0 = base, 1 = elemental, 2 = fusion, 3 = transcen
 var evolves_from: String = ""
 var ascends_from: String = ""
 var fusion_materials: Array[String] = []
+var set_id: String = "set_1"
+var keywords: Array[String] = []
 var description: String = ""
 var status: String = "CONFIRMED" # "CONFIRMED", "REMEMBERED", "PROVISIONAL"
 
@@ -40,7 +42,13 @@ static func from_dict(dict: Dictionary) -> CardData:
 	if dict.has("fusion_materials"):
 		for mat in dict["fusion_materials"]:
 			card.fusion_materials.append(str(mat))
-			
+
+	card.keywords.clear()
+	if dict.has("keywords"):
+		for kw in dict["keywords"]:
+			card.keywords.append(str(kw).to_lower())
+
+	card.set_id = str(dict.get("set", "set_1"))
 	card.description = dict.get("description", "")
 	card.status = dict.get("status", "PROVISIONAL")
 	return card
