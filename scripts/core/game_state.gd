@@ -7,6 +7,7 @@ signal card_drawn(player_id: int, card: CardData)
 signal card_played(player_id: int, card: CardData)
 signal beast_summoned(player_id: int, beast: BeastInstance)
 signal beast_evolved(player_id: int, beast: BeastInstance)
+signal beast_direct_summoned(player_id: int, beast: BeastInstance, stones_spent: int)
 signal beasts_fused(player_id: int, fused_beast: BeastInstance)
 signal beast_transcended(player_id: int, beast: BeastInstance)
 signal beast_ascended(player_id: int, beast: BeastInstance)
@@ -365,6 +366,89 @@ func evolve_beast(player_id: int, beast_field_index: int, evo_card_hand_index: i
 		card_played.emit(player_id, evo_card)
 		return true
 	return false
+
+func get_direct_summon_stone_cost(card: CardData) -> Dictionary:
+	if not card:
+		return {}
+	var el: String = card.element.to_lower()
+	if el.is_empty():
+		return {}
+	var stones_needed: int = 4
+	if active_realm != null and active_realm.card_type == "realm":
+		var reduction: int = int(active_realm.ability.get("stone_reduction", 1))
+		stones_needed = maxi(2, stones_needed - reduction)
+	return {el: stones_needed}
+
+func can_direct_summon_evolved_beast(player_id: int, card: CardData) -> Dictionary:
+	if player_id != active_player_id or is_game_over:
+		return {"valid": false, "error": "Not your turn"}
+	if not card:
+		return {"valid": false, "error": "Invalid card"}
+	if card.card_type != "beast" or card.evolution_stage != 1:
+		return {"valid": false, "error": "Only Stage 1 Evolved Dragons can be directly summoned"}
+		
+	var field: Array = player_fields[player_id]
+	if field.size() >= RulesConfig.MAX_FIELD_BEASTS:
+		return {"valid": false, "error": "Battlefield is full (max " + str(RulesConfig.MAX_FIELD_BEASTS) + " beasts)"}
+		
+	var cost: Dictionary = get_direct_summon_stone_cost(card)
+	var el: String = card.element.to_lower()
+	var stone_mgr: StoneManager = player_stones[player_id]
+	if not stone_mgr.has_stones(cost):
+		var needed: int = cost.get(el, 4)
+		return {"valid": false, "error": "Requires %d %s Stones to direct summon %s" % [needed, el.capitalize(), card.name]}
+		
+	return {"valid": true, "error": "", "cost": cost, "element": el}
+
+func direct_summon_evolved_beast(player_id: int, hand_index: int) -> BeastInstance:
+	if player_id != active_player_id or is_game_over:
+		return null
+	var hand: Array = player_hands[player_id]
+	if hand_index < 0 or hand_index >= hand.size():
+		return null
+	var card: CardData = hand[hand_index]
+	var check = can_direct_summon_evolved_beast(player_id, card)
+	if not check.valid:
+		return null
+		
+	var cost: Dictionary = check.get("cost", get_direct_summon_stone_cost(card))
+	var stone_mgr: StoneManager = player_stones[player_id]
+	if not stone_mgr.spend_stones(cost):
+		return null
+		
+	hand.remove_at(hand_index)
+	var beast = BeastInstance.create(card, player_id, turn_number)
+	player_fields[player_id].append(beast)
+	
+	# Apply on-summon / on-evolve abilities
+	var evo_ability = card.ability if card.ability else {}
+	var evo_effect = evo_ability.get("effect", "")
+	if card.id == "fire_dragon" or evo_effect == "bonus_attack_on_evolve":
+		beast.bonus_attack += int(evo_ability.get("bonus_attack", 3))
+	elif card.id == "ice_dragon" or evo_effect == "freeze_enemy_on_evolve":
+		var enemy_id = 1 if player_id == 0 else 0
+		if player_fields[enemy_id].size() > 0:
+			var eb: BeastInstance = player_fields[enemy_id][0]
+			eb.freeze_turns = maxi(eb.freeze_turns, int(evo_ability.get("freeze_turns", 1)))
+	elif card.id == "wind_dragon" or evo_effect == "bounce_creature_on_evolve":
+		var enemy_id = 1 if player_id == 0 else 0
+		if player_fields[enemy_id].size() > 0:
+			var bounced: BeastInstance = player_fields[enemy_id].pop_back()
+			bounced.cleanse()
+			player_hands[enemy_id].append(bounced.card_data)
+		elif player_fields[player_id].size() > 1:
+			for bi in range(player_fields[player_id].size()):
+				if player_fields[player_id][bi] != beast:
+					var bounced: BeastInstance = player_fields[player_id].pop_at(bi)
+					bounced.cleanse()
+					player_hands[player_id].append(bounced.card_data)
+					break
+
+	var stones_spent: int = cost.get(card.element.to_lower(), 4)
+	beast_direct_summoned.emit(player_id, beast, stones_spent)
+	beast_summoned.emit(player_id, beast)
+	card_played.emit(player_id, card)
+	return beast
 
 func play_realm(player_id: int, hand_index: int) -> Dictionary:
 	if player_id != active_player_id or is_game_over:

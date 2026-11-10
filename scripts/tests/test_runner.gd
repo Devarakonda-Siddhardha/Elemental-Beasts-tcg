@@ -82,6 +82,7 @@ func run_all_tests() -> void:
 	test_37_beast_action_modal_centering_and_orchestral_bgm()
 	test_38_set_2_water_and_relics_mechanics()
 	test_39_element_stones_secondary_cost_and_auto_shuffle()
+	test_40_direct_summon_evolved_dragons()
 
 func test_1_turn_begins_with_5_mana() -> void:
 	var state = GameState.new()
@@ -1446,6 +1447,69 @@ func test_39_element_stones_secondary_cost_and_auto_shuffle() -> void:
 	state.player_decks[0] = [db["fire_dragon"], db["fire_stone"]]
 	state.cast_call_to_arms(0, 0, db["fire_dragon"])
 	assert_true(shuffle_counter["count"] == 5, "Requirement 39j: Dragon Call to Arms auto-shuffles deck and emits deck_shuffled")
+
+func test_40_direct_summon_evolved_dragons() -> void:
+	var state = GameState.new()
+	state.start_game()
+	var db = state.card_db
+	var shadow_dragon = db["shadow_dragon"]
+	var fire_dragon = db["fire_dragon"]
+
+	# 1. Verification of stone requirement (requires 4 matching stones)
+	state.player_stones[0].stone_pile.clear()
+	var check_0 = state.can_direct_summon_evolved_beast(0, shadow_dragon)
+	assert_true(not check_0.valid, "Requirement 40a: Cannot direct summon Shadow Dragon with 0 Shadow Stones")
+
+	state.player_stones[0].stone_pile["shadow"] = 3
+	var check_3 = state.can_direct_summon_evolved_beast(0, shadow_dragon)
+	assert_true(not check_3.valid, "Requirement 40b: Cannot direct summon Shadow Dragon with only 3 Shadow Stones")
+
+	state.player_stones[0].stone_pile["shadow"] = 4
+	var check_4 = state.can_direct_summon_evolved_beast(0, shadow_dragon)
+	assert_true(check_4.valid, "Requirement 40c: Can direct summon Shadow Dragon with exactly 4 Shadow Stones")
+
+	# 2. Direct summon execution and signal emission
+	var direct_signals: Array = []
+	var summon_signals: Array = []
+	var played_signals: Array = []
+	state.beast_direct_summoned.connect(func(p_id, b, stones): if p_id == 0: direct_signals.append({"beast": b, "stones": stones}))
+	state.beast_summoned.connect(func(p_id, b): if p_id == 0: summon_signals.append(b))
+	state.card_played.connect(func(p_id, c): if p_id == 0: played_signals.append(c))
+
+	state.player_hands[0] = [shadow_dragon]
+	var beast = state.direct_summon_evolved_beast(0, 0)
+	assert_true(beast != null and beast.card_data.id == "shadow_dragon", "Requirement 40d: Direct summon creates Shadow Dragon BeastInstance")
+	assert_true(state.player_fields[0].size() == 1, "Requirement 40e: Shadow Dragon placed directly onto player field")
+	assert_true(state.player_stones[0].get_stone_count("shadow") == 0, "Requirement 40f: Deducted 4 Shadow Stones")
+	assert_true(direct_signals.size() == 1 and direct_signals[0].stones == 4, "Requirement 40g: beast_direct_summoned signal emitted with 4 stones")
+	assert_true(summon_signals.size() == 1 and summon_signals[0] == beast, "Requirement 40h: beast_summoned signal emitted")
+	assert_true(played_signals.size() == 1 and played_signals[0] == shadow_dragon, "Requirement 40i: card_played signal emitted")
+
+	# 3. Cannot direct summon when field is full (4 beasts)
+	while state.player_fields[0].size() < RulesConfig.MAX_FIELD_BEASTS:
+		state.player_fields[0].append(BeastInstance.create(db["little_dragon"], 0, 1))
+	assert_true(state.player_fields[0].size() == 4, "Requirement 40j: Field at maximum capacity (4 beasts)")
+
+	state.player_stones[0].stone_pile["shadow"] = 4
+	state.player_hands[0] = [shadow_dragon]
+	var full_check = state.can_direct_summon_evolved_beast(0, shadow_dragon)
+	assert_true(not full_check.valid, "Requirement 40k: Direct summon rejected when field is full")
+	var full_res = state.direct_summon_evolved_beast(0, 0)
+	assert_true(full_res == null, "Requirement 40l: direct_summon_evolved_beast returns null when field is full")
+
+	# 4. On-summon ability triggered for Fire Dragon (+3 ATK)
+	state.player_fields[0].clear()
+	state.player_stones[0].stone_pile["fire"] = 4
+	state.player_hands[0] = [fire_dragon]
+	var fd_beast = state.direct_summon_evolved_beast(0, 0)
+	assert_true(fd_beast != null and fd_beast.bonus_attack == 3, "Requirement 40m: Fire Dragon bonus attack (+3) applied on direct summon")
+
+	# 5. Realm stone reduction applies to direct summon cost (4 -> 3 stones, minimum 2)
+	var caldera = db["inferno_caldera"]
+	state.active_realm = caldera
+	var cost_with_realm = state.get_direct_summon_stone_cost(fire_dragon)
+	assert_true(cost_with_realm.get("fire", 0) == 3, "Requirement 40n: Active Realm reduces direct summon stone requirement from 4 to 3")
+
 
 
 

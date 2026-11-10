@@ -82,6 +82,18 @@ func execute_turn() -> Array[String]:
 		var card = game_state.get_hand(ai_player_id)[evo_card_idx]
 		if game_state.evolve_beast(ai_player_id, beast_idx, evo_card_idx):
 			action_log.append("AI evolved Little Dragon into " + card.name + "!")
+
+	# 3b. Check for Direct Summon Opportunities (4 matching stones for Stage 1 Dragon)
+	while game_state.get_field(ai_player_id).size() < RulesConfig.MAX_FIELD_BEASTS:
+		var direct_idx = find_playable_direct_summon()
+		if direct_idx == -1:
+			break
+		var d_card = game_state.get_hand(ai_player_id)[direct_idx]
+		var direct_beast = game_state.direct_summon_evolved_beast(ai_player_id, direct_idx)
+		if direct_beast:
+			action_log.append("AI direct summoned " + d_card.name + " (spent 4 " + d_card.element.capitalize() + " Stones)!")
+		else:
+			break
 			
 	# 4. Summon Little Dragon / Fierce Little Dragon (2 Mana each)
 	while game_state.get_mana(ai_player_id).can_spend(RulesConfig.LITTLE_DRAGON_MANA_COST):
@@ -292,3 +304,13 @@ func find_playable_ascension() -> Array[int]:
 				if check.valid:
 					return [b_idx, h_idx]
 	return []
+
+func find_playable_direct_summon() -> int:
+	var hand = game_state.get_hand(ai_player_id)
+	for i in range(hand.size()):
+		var card: CardData = hand[i]
+		if card.card_type == "beast" and card.evolution_stage == 1:
+			if game_state.can_direct_summon_evolved_beast(ai_player_id, card).valid:
+				return i
+	return -1
+

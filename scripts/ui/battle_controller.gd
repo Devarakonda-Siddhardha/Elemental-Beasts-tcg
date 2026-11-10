@@ -21,7 +21,8 @@ const HAND_CARD_SCALE: float = 0.6
 const PREVIEW_CARD_SCALE: float = 1.0
 const ELEMENT_UI_COLORS = {
 	"fire": Color(1.0, 0.4, 0.2), "lightning": Color(1.0, 0.85, 0.2), "wind": Color(0.3, 0.95, 0.55),
-	"ice": Color(0.4, 0.85, 1.0), "shadow": Color(0.78, 0.45, 1.0), "mechanical": Color(0.85, 0.8, 0.75)
+	"ice": Color(0.4, 0.85, 1.0), "shadow": Color(0.78, 0.45, 1.0), "mechanical": Color(0.85, 0.8, 0.75),
+	"water": Color(0.25, 0.65, 1.0), "neutral": Color(0.9, 0.85, 0.7)
 }
 
 @onready var player_hp_label: Label = $PlayerBar/LifeCrest/HPLabel
@@ -603,6 +604,8 @@ func refresh_player_hand() -> void:
 					if EvolutionEngine.can_evolve(b, card, stone_mgr, game_state.active_realm).valid:
 						playable = true
 						break
+				if not playable and game_state.can_direct_summon_evolved_beast(0, card).valid:
+					playable = true
 			elif card.sub_type == "fusion_dragon":
 				if FusionEngine.can_fuse(field, card).valid:
 					playable = true
@@ -1126,11 +1129,42 @@ func _on_hand_card_clicked(card_ui: CardUI, hand_index: int) -> void:
 		)
 		return
 
-	# If Evolution card -> enter evolving mode
+	# If Evolution card -> check direct summon vs evolve
 	if card.evolution_stage == 1:
+		var can_direct: Dictionary = game_state.can_direct_summon_evolved_beast(0, card)
+		var has_evo_target := false
+		for b in game_state.get_field(0):
+			if EvolutionEngine.can_evolve(b, card, game_state.get_stones(0), game_state.active_realm).valid:
+				has_evo_target = true
+				break
+
+		# If no evolution targets available, but direct summon is valid, direct summon immediately!
+		if not has_evo_target and can_direct.valid:
+			var beast = game_state.direct_summon_evolved_beast(0, hand_index)
+			if beast:
+				if has_node("/root/SoundManager"):
+					var sm = get_node("/root/SoundManager")
+					sm.play_evolution()
+					sm.play_stone_spend()
+					if sm.has_method("play_voice"):
+						sm.play_voice("vo_summon")
+				var cost_val: int = can_direct.get("cost", {}).get(card.element.to_lower(), 4)
+				log_message("  🐉 Direct Summoned [b]" + beast.card_data.name + "[/b] (Spent %d %s Stones)" % [cost_val, card.element.capitalize()])
+				refresh_full_ui()
+			return
+		elif not has_evo_target and not can_direct.valid:
+			log_message("[color=#e76f51]  ⚠️ " + can_direct.error + "[/color]")
+			return
+
+		# Both options or has targets: enter evolving mode with direct summon option button
 		selected_hand_card_ui = card_ui
 		current_action_mode = "evolving"
-		prompt_banner.text = "Select a Little Dragon on your battlefield to Evolve into " + card.name + "!"
+		if can_direct.valid:
+			var cost_val: int = can_direct.get("cost", {}).get(card.element.to_lower(), 4)
+			prompt_banner.text = "Select Little Dragon to Evolve (2 Stones) — or Direct Summon below (%d Stones)!" % cost_val
+			_show_direct_summon_button(hand_index, card, cost_val)
+		else:
+			prompt_banner.text = "Select a Little Dragon on your battlefield to Evolve into " + card.name + "!"
 		prompt_banner.visible = true
 		return
 		
@@ -1512,12 +1546,59 @@ func _on_opponent_panel_input(event: InputEvent) -> void:
 			reset_action_mode()
 			refresh_full_ui()
 
+func _show_direct_summon_button(hand_index: int, card: CardData, cost_val: int) -> void:
+	if has_node("DirectSummonOptionBtn"):
+		get_node("DirectSummonOptionBtn").queue_free()
+	var btn := Button.new()
+	btn.name = "DirectSummonOptionBtn"
+	btn.text = "⚡ Direct Summon %s (%d %s Stones)" % [card.name, cost_val, card.element.capitalize()]
+	btn.tooltip_text = "Directly put %s into play onto the battlefield for %d %s Stones without evolving" % [card.name, cost_val, card.element.capitalize()]
+	btn.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	btn.offset_left = -180.0
+	btn.offset_right = 180.0
+	btn.offset_top = 82.0
+	btn.offset_bottom = 126.0
+	btn.z_index = 60
+	
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.12, 0.06, 0.22, 0.95)
+	sb.border_color = Color(1.0, 0.85, 0.35, 1.0)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(10)
+	sb.shadow_color = Color(1.0, 0.85, 0.35, 0.5)
+	sb.shadow_size = 8
+	btn.add_theme_stylebox_override("normal", sb)
+	btn.add_theme_stylebox_override("hover", sb)
+	btn.add_theme_stylebox_override("pressed", sb)
+	btn.add_theme_font_size_override("font_size", 13)
+	btn.add_theme_color_override("font_color", Color(1.0, 0.95, 0.6))
+
+	btn.pressed.connect(func():
+		var hand = game_state.get_hand(0)
+		var cur_idx = hand.find(card)
+		if cur_idx != -1:
+			var beast = game_state.direct_summon_evolved_beast(0, cur_idx)
+			if beast:
+				if has_node("/root/SoundManager"):
+					var sm = get_node("/root/SoundManager")
+					sm.play_evolution()
+					sm.play_stone_spend()
+					if sm.has_method("play_voice"):
+						sm.play_voice("vo_summon")
+				log_message("  🐉 Direct Summoned [b]" + beast.card_data.name + "[/b] (Spent %d %s Stones)" % [cost_val, card.element.capitalize()])
+		reset_action_mode()
+		refresh_full_ui()
+	)
+	add_child(btn)
+
 func reset_action_mode() -> void:
 	current_action_mode = "none"
 	selected_hand_card_ui = null
 	selected_field_beast_ui = null
 	selected_ability_beast_index = -1
 	prompt_banner.visible = false
+	if has_node("DirectSummonOptionBtn"):
+		get_node("DirectSummonOptionBtn").queue_free()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
@@ -1591,6 +1672,46 @@ func _on_beast_ascended(player_id: int, beast: BeastInstance) -> void:
 func _on_god_dragon_summoned(player_id: int, beast: BeastInstance) -> void:
 	call_deferred("play_card_summon_vfx", player_id, beast, true)
 
+class SummonPortalVFX extends Control:
+	var circle_color: Color = Color(1.0, 0.85, 0.35)
+	var radius: float = 75.0
+	var points: int = 8
+	
+	func _draw() -> void:
+		# Outer magic ring
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 64, circle_color, 3.2, true)
+		# Inner concentric ring
+		draw_arc(Vector2.ZERO, radius * 0.65, 0.0, TAU, 48, Color(circle_color.r, circle_color.g, circle_color.b, 0.6), 2.0, true)
+		# Core rune circle
+		draw_arc(Vector2.ZERO, radius * 0.35, 0.0, TAU, 32, Color(circle_color.r, circle_color.g, circle_color.b, 0.35), 1.5, true)
+		# 4 Cardinal diamond pips
+		for i in range(4):
+			var a := (float(i) / 4.0) * TAU
+			var tip := Vector2(cos(a), sin(a)) * (radius + 6.0)
+			var left_pt := Vector2(cos(a - 0.16), sin(a - 0.16)) * (radius - 12.0)
+			var right_pt := Vector2(cos(a + 0.16), sin(a + 0.16)) * (radius - 12.0)
+			var inner_pt := Vector2(cos(a), sin(a)) * (radius - 20.0)
+			draw_colored_polygon(PackedVector2Array([tip, left_pt, inner_pt, right_pt]), circle_color)
+		# Inscribed 8-point rotating star rays
+		for p in range(points):
+			var a1 := (float(p) / float(points)) * TAU
+			var a2 := (float((p + 3) % points) / float(points)) * TAU
+			var p1 := Vector2(cos(a1), sin(a1)) * (radius * 0.95)
+			var p2 := Vector2(cos(a2), sin(a2)) * (radius * 0.95)
+			draw_line(p1, p2, Color(circle_color.r, circle_color.g, circle_color.b, 0.45), 1.6, true)
+
+func _apply_screen_shake(intensity: float = 4.0, duration: float = 0.22) -> void:
+	if not is_inside_tree():
+		return
+	var orig_pos := Vector2.ZERO
+	var tw := create_tween()
+	var steps := int(duration / 0.035)
+	for i in range(steps):
+		var damp := 1.0 - (float(i) / float(steps))
+		var offset := Vector2(randf_range(-intensity, intensity), randf_range(-intensity, intensity)) * damp
+		tw.tween_property(self, "position", orig_pos + offset, 0.035)
+	tw.tween_property(self, "position", orig_pos, 0.035)
+
 func play_card_summon_vfx(player_id: int, beast: BeastInstance, is_major_transformation: bool = false) -> void:
 	if not is_inside_tree() or beast == null or beast.card_data == null:
 		return
@@ -1610,78 +1731,144 @@ func play_card_summon_vfx(player_id: int, beast: BeastInstance, is_major_transfo
 	var el_key := beast.card_data.element.to_lower()
 	var vfx_color: Color = ELEMENT_UI_COLORS.get(el_key, Color(1.0, 0.85, 0.35))
 	if beast.card_data.id == "god_dragon":
-		vfx_color = Color(1.0, 0.92, 0.40)
+		vfx_color = Color(1.0, 0.95, 0.45)
 
-	# Animate the summoned CardUI dropping in with an energetic scale pop and flash
+	# 1. Subtle, high-impact screen shake
+	_apply_screen_shake(5.5 if is_major_transformation else 3.2, 0.26 if is_major_transformation else 0.18)
+
+	# 2. Dynamic card entrance drop with energetic scale bounce, tilt wobble, and white-hot flash
 	if target_card_ui != null:
 		var rest_pos := target_card_ui.position
 		var rest_scale := target_card_ui.base_scale
-		target_card_ui.scale = rest_scale * (1.42 if is_major_transformation else 1.28)
-		target_card_ui.position = rest_pos + Vector2(0, -28)
-		target_card_ui.modulate = Color(1.8, 1.7, 1.5, 1.0)
+		target_card_ui.scale = rest_scale * (1.55 if is_major_transformation else 1.38)
+		target_card_ui.position = rest_pos + Vector2(randf_range(-5.0, 5.0), -36.0)
+		target_card_ui.rotation_degrees = randf_range(-6.0, 6.0)
+		target_card_ui.modulate = Color(2.4, 2.2, 1.8, 1.0)
 		var c_tw := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		c_tw.tween_property(target_card_ui, "scale", rest_scale, 0.30)
-		c_tw.parallel().tween_property(target_card_ui, "position", rest_pos, 0.26)
-		c_tw.parallel().tween_property(target_card_ui, "modulate", Color.WHITE, 0.32)
+		c_tw.tween_property(target_card_ui, "scale", rest_scale, 0.35)
+		c_tw.parallel().tween_property(target_card_ui, "position", rest_pos, 0.30)
+		c_tw.parallel().tween_property(target_card_ui, "rotation_degrees", 0.0, 0.32)
+		c_tw.parallel().tween_property(target_card_ui, "modulate", Color.WHITE, 0.36)
 
 	var vfx_layer := Control.new()
 	vfx_layer.name = "SummonVFXLayer"
 	vfx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vfx_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	vfx_layer.z_index = 42
+	vfx_layer.z_index = 45
 	add_child(vfx_layer)
 
-	# Expanding Elemental Shockwave Ring 1 & 2
-	for r_i in range(2 if is_major_transformation else 1):
+	# 3. Rotating Arcane Summoning Circle / Portal
+	var portal := SummonPortalVFX.new()
+	portal.circle_color = vfx_color
+	portal.radius = 95.0 if is_major_transformation else 75.0
+	portal.position = target_center
+	portal.scale = Vector2(0.2, 0.2)
+	portal.pivot_offset = Vector2.ZERO
+	vfx_layer.add_child(portal)
+
+	var p_tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	p_tw.tween_property(portal, "scale", Vector2(1.35, 1.35), 0.50)
+	p_tw.parallel().tween_property(portal, "rotation", PI * 0.75, 0.50)
+	p_tw.parallel().tween_property(portal, "modulate:a", 0.0, 0.50)
+
+	# 4. Vertical Translucent Pillar of Elemental Light
+	var pillar := ColorRect.new()
+	pillar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var p_w: float = 85.0 if is_major_transformation else 65.0
+	pillar.size = Vector2(p_w, 720.0)
+	pillar.pivot_offset = Vector2(p_w * 0.5, 360.0)
+	pillar.position = Vector2(target_center.x - p_w * 0.5, 0.0)
+	pillar.color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.42)
+	vfx_layer.add_child(pillar)
+
+	var pil_tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	pil_tw.tween_property(pillar, "scale:x", 1.35, 0.08)
+	pil_tw.tween_property(pillar, "scale:x", 0.05, 0.36)
+	pil_tw.parallel().tween_property(pillar, "modulate:a", 0.0, 0.36)
+
+	# 5. Expanding Elemental Shockwave Rings (Dual rings)
+	for r_i in range(2):
 		var ring := Panel.new()
 		ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var init_sz := Vector2(44, 44)
+		var init_sz := Vector2(36, 36)
 		ring.size = init_sz
 		ring.pivot_offset = init_sz * 0.5
 		ring.position = target_center - ring.pivot_offset
 		var r_sb := StyleBoxFlat.new()
-		r_sb.bg_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.28)
-		r_sb.border_color = vfx_color.lightened(0.35)
-		r_sb.set_border_width_all(4)
-		r_sb.set_corner_radius_all(120)
-		r_sb.shadow_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.85)
+		r_sb.bg_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.22 if r_i == 0 else 0.12)
+		r_sb.border_color = vfx_color.lightened(0.4)
+		r_sb.set_border_width_all(4 if r_i == 0 else 2)
+		r_sb.set_corner_radius_all(140)
+		r_sb.shadow_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, 0.8)
 		r_sb.shadow_size = 14
 		ring.add_theme_stylebox_override("panel", r_sb)
 		vfx_layer.add_child(ring)
 
-		var final_sz := Vector2(230, 230) if is_major_transformation else Vector2(180, 180)
+		var final_sz := Vector2(250, 250) if r_i == 0 else Vector2(190, 190)
 		var r_tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		r_tw.tween_interval(float(r_i) * 0.08)
-		r_tw.tween_property(ring, "size", final_sz, 0.36)
-		r_tw.parallel().tween_property(ring, "position", target_center - final_sz * 0.5, 0.36)
-		r_tw.parallel().tween_property(ring, "modulate:a", 0.0, 0.36)
+		r_tw.tween_interval(float(r_i) * 0.07)
+		r_tw.tween_property(ring, "size", final_sz, 0.40)
+		r_tw.parallel().tween_property(ring, "position", target_center - final_sz * 0.5, 0.40)
+		r_tw.parallel().tween_property(ring, "modulate:a", 0.0, 0.40)
 
-	# Radial Elemental Sparks
-	var spark_count := 16 if is_major_transformation else 10
+	# 6. Radial Elemental Particle Bursts with Element-Specific Kinematics
+	var spark_count := 22 if is_major_transformation else 16
 	for s_i in range(spark_count):
 		var spark := Panel.new()
 		spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		spark.size = Vector2(10, 10)
-		spark.pivot_offset = Vector2(5, 5)
-		spark.position = target_center - Vector2(5, 5)
+		var spark_sz: float = randf_range(8.0, 14.0) if is_major_transformation else randf_range(6.0, 11.0)
+		spark.size = Vector2(spark_sz, spark_sz)
+		spark.pivot_offset = spark.size * 0.5
+		spark.position = target_center - spark.pivot_offset
 		var s_sb := StyleBoxFlat.new()
-		s_sb.bg_color = vfx_color.lightened(0.4)
-		s_sb.set_corner_radius_all(5)
+		s_sb.bg_color = vfx_color.lightened(randf_range(0.25, 0.55))
+		s_sb.set_corner_radius_all(int(spark_sz * 0.5))
 		s_sb.shadow_color = vfx_color
-		s_sb.shadow_size = 6
+		s_sb.shadow_size = 8
 		spark.add_theme_stylebox_override("panel", s_sb)
 		vfx_layer.add_child(spark)
 
-		var angle := (float(s_i) / float(spark_count)) * TAU
-		var radius := (125.0 if is_major_transformation else 92.0) + float((s_i % 3) * 14)
+		var angle := (float(s_i) / float(spark_count)) * TAU + randf_range(-0.14, 0.14)
+		var radius := randf_range(110.0, 180.0) if is_major_transformation else randf_range(75.0, 135.0)
 		var offset := Vector2(cos(angle), sin(angle)) * radius
+		
+		# Element-specific drift
+		if el_key == "fire":
+			offset.y -= randf_range(30.0, 65.0) # Upward rising embers
+		elif el_key == "wind":
+			offset = offset.rotated(0.55) # Swirling vortex
+		elif el_key == "water":
+			offset.y += randf_range(-15.0, 40.0) # Splash curve
+
 		var s_tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		s_tw.tween_property(spark, "position", target_center - Vector2(5, 5) + offset, 0.38)
-		s_tw.parallel().tween_property(spark, "scale", Vector2(0.2, 0.2), 0.38)
-		s_tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.38)
+		s_tw.tween_property(spark, "position", target_center - spark.pivot_offset + offset, randf_range(0.34, 0.46))
+		s_tw.parallel().tween_property(spark, "scale", Vector2(0.12, 0.12), 0.42)
+		s_tw.parallel().tween_property(spark, "modulate:a", 0.0, 0.42)
+
+	# 7. Floating Summon Announcement Badge
+	var badge_text := ""
+	if is_major_transformation:
+		if beast.card_data.id == "god_dragon":
+			badge_text = "✦ GOD DRAGON DESCENDED ✦"
+		elif beast.card_data.sub_type == "fusion_dragon":
+			badge_text = "✦ FUSION SUMMON ✦"
+		elif beast.card_data.sub_type == "transcendent_dragon":
+			badge_text = "✦ TRANSCENDED ✦"
+		elif beast.card_data.sub_type == "ascended_dragon":
+			badge_text = "✦ ASCENDED ✦"
+		else:
+			badge_text = "✦ EVOLVED ✦"
+	else:
+		if beast.card_data.evolution_stage == 1:
+			badge_text = "✦ DIRECT SUMMON ✦"
+		else:
+			badge_text = "✦ SUMMONED ✦"
+
+	var badge_pos = target_center + Vector2(0, -96 if player_id == 0 else 76)
+	spawn_floating_combat_text(badge_pos, badge_text, vfx_color.lightened(0.35), true)
 
 	var clean_tw := create_tween()
-	clean_tw.tween_interval(0.50)
+	clean_tw.tween_interval(0.55)
 	clean_tw.tween_callback(vfx_layer.queue_free)
 
 func spawn_floating_combat_text(pos: Vector2, text: String, color: Color = Color(1.0, 0.28, 0.22), is_crit: bool = false) -> void:
