@@ -228,6 +228,12 @@ func update_ui() -> void:
 		type_label.text = "ELEMENT STONE"
 	elif card_data.card_type == "support":
 		type_label.text = "SUPPORT ITEM"
+	elif card_data.card_type == "relic":
+		type_label.text = "RELIC EQUIPMENT"
+	elif card_data.card_type == "rift":
+		type_label.text = "REACTION RIFT"
+	elif card_data.card_type == "realm":
+		type_label.text = "REALM SANCTUM"
 	elif card_data.card_type == "spell":
 		type_label.text = "SPELL"
 	else:
@@ -451,8 +457,8 @@ func _apply_frame_layout() -> void:
 		ability_desc_label.add_theme_color_override("font_color", dark_ink)
 		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
 		_set_rect($AbilityBox, 26, 188, 174, 238)
-	elif card_data.card_type == "spell":
-		# Spell templates have top banner ("SPELL") and light parchment bottom box
+	elif card_data.card_type == "spell" or card_data.card_type == "rift":
+		# Spell & Rift templates have top banner ("SPELL") and light parchment bottom box
 		type_label.visible = false
 		element_icon.visible = true
 		_set_rect(name_label, 34, 41, 166, 56)
@@ -461,8 +467,8 @@ func _apply_frame_layout() -> void:
 		ability_desc_label.add_theme_color_override("font_color", dark_ink)
 		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
 		_set_rect($AbilityBox, 26, 160, 174, 232)
-	elif card_data.card_type == "support":
-		# Support templates have top banner ("Supporter"), middle ribbon, and parchment bottom box
+	elif card_data.card_type == "support" or card_data.card_type == "relic":
+		# Support & Relic templates have top banner ("Supporter"), middle ribbon, and parchment bottom box
 		type_label.visible = false
 		element_icon.visible = false
 		_set_rect(name_label, 38, 143, 162, 160)
@@ -471,6 +477,20 @@ func _apply_frame_layout() -> void:
 		ability_desc_label.add_theme_color_override("font_color", dark_ink)
 		ability_desc_label.add_theme_color_override("font_shadow_color", dark_shadow)
 		_set_rect($AbilityBox, 26, 170, 174, 234)
+	elif card_data.card_type == "realm":
+		# Realm Sanctum templates have top name banner, panoramic art window, type badge, and ability box
+		type_label.visible = true
+		element_icon.visible = true
+		_set_rect(name_label, 52, 41, 148, 56)
+		_set_rect(art_rect, 24, 56, 176, 137)
+		_set_rect(type_label, 46, 140, 154, 155)
+		type_label.add_theme_color_override("font_color", gold_title)
+		type_label.add_theme_color_override("font_shadow_color", light_shadow)
+		ability_title_label.add_theme_color_override("font_color", gold_title)
+		ability_title_label.add_theme_color_override("font_shadow_color", light_shadow)
+		ability_desc_label.add_theme_color_override("font_color", light_ink)
+		ability_desc_label.add_theme_color_override("font_shadow_color", light_shadow)
+		_set_rect($AbilityBox, 26, 159, 174, 224)
 	elif card_data.sub_type == "base_dragon" or card_data.element == "neutral":
 		# Base Dragon (Little Dragon) has arch sky, middle parchment ribbon, bottom parchment box
 		_set_rect(name_label, 42, 34, 158, 50)
@@ -610,16 +630,16 @@ static func get_template_path(element_name: String, ctype: String, subtype: Stri
 		if ResourceLoader.exists(fallback_el):
 			return fallback_el
 
-	# 4. Spell Cards (Elemental spell storm templates)
-	if ctype == "spell":
+	# 4. Spell Cards & Reaction Rifts (Elemental spell storm templates)
+	if ctype == "spell" or ctype == "rift":
 		var spell_path = "res://assets/templates/spell_" + element_name.to_lower() + ".png"
 		if ResourceLoader.exists(spell_path):
 			return spell_path
 		if ResourceLoader.exists("res://assets/templates/template_support.png"):
 			return "res://assets/templates/template_support.png"
 
-	# 4. Support / Item Cards (Compass celestial mountain & star crest)
-	if ctype == "support":
+	# 5. Support / Item Cards / Relics (Compass celestial mountain & star crest)
+	if ctype == "support" or ctype == "relic":
 		if ResourceLoader.exists("res://assets/templates/template_support.png"):
 			return "res://assets/templates/template_support.png"
 
